@@ -1,0 +1,4 @@
+examples/core/io
+examples/core/vector
+examples/xcb/open_window
+examples/xcb/simple_draw
