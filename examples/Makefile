@@ -9,7 +9,9 @@ INCLUDES := -I../src
 SOURCES := core/io.c \
 					 core/vector.c \
 					 xcb/open_window.c \
-					 xcb/simple_draw.c
+					 xcb/wait_events.c \
+					 xcb/poll_events.c \
+					 xcb/draw_api
 
 LIBS := xcb
 
