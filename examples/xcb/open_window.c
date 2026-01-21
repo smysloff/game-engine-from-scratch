@@ -23,6 +23,7 @@ int main(void)
   xcb_map_window(connection, window);
   xcb_flush(connection);
 
+  print_log("wait for 5 seconds");
   sleep(5);
 
   xcb_disconnect(connection);
