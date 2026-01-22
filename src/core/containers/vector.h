@@ -13,8 +13,6 @@ typedef struct
   void   *data;
 } vector_t;
 
-//static bool_t is_overflow(const vector_t *v, usize_t capacity);
-
 void    vector_free(vector_t *v);
 bool_t  vector_init(vector_t *v, usize_t capacity, usize_t item_size);
 bool_t  vector_resize(vector_t *v, usize_t new_capacity);
@@ -35,7 +33,7 @@ usize_t vector_capacity_size(const vector_t *v);
 static bool_t
 is_overflow(const vector_t *v, usize_t capacity)
 {
-  return capacity > SIZE_MAX / v->item_size;
+  return capacity > USIZE_MAX / v->item_size;
 }
 
 void
