@@ -11,7 +11,8 @@ SOURCES := core/io.c \
 					 xcb/open_window.c \
 					 xcb/wait_events.c \
 					 xcb/poll_events.c \
-					 xcb/draw_api.c
+					 xcb/draw_api.c \
+					 xcb/fonts.c
 
 LIBS := xcb
 

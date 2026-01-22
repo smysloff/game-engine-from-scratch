@@ -3,6 +3,18 @@
 
 #pragma once
 
+
+// Default C types
+
+//...........................void;
+//...........................char;
+//............................int;
+//..........................float;
+//.........................double;
+
+
+// Base integer types
+
 typedef signed char          i8_t;
 typedef signed short        i16_t;
 typedef signed int          i32_t;
@@ -14,6 +26,8 @@ typedef unsigned int        u32_t;
 typedef unsigned long long  u64_t;
 
 
+// Types for size and difference
+
 #ifdef __LP64__
   typedef i64_t isize_t;
   typedef u64_t usize_t;
@@ -21,6 +35,9 @@ typedef unsigned long long  u64_t;
   typedef i32_t isize_t;
   typedef u32_t usize_t;
 #endif
+
+
+// Boolean type
 
 typedef _Bool bool_t;
 
@@ -33,10 +50,14 @@ typedef _Bool bool_t;
 #endif
 
 
+// NULL
+
 #ifndef NULL
   #define NULL ((void *) 0)
 #endif
 
+
+// Integer constants
 
 #ifndef CHAR_MIN
   #define CHAR_MIN (-128)

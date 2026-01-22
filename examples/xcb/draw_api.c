@@ -55,12 +55,35 @@ typedef struct
   bool_t loop;
 } gl_t;
 
+void gl_create_window(gl_t *gl, u16_t width, u16_t height);
+void gl_destroy_window(gl_t *gl);
+void gl_free_event(gl_t *gl);
+void gl_set_color(gl_t *gl, u32_t fgcolor, u32_t bgcolor);
+
+void expose_handler(gl_t *gl);
+void key_press_handler(gl_t *gl);
+
+void draw_frame(gl_t *gl);
+void loop_frames(gl_t *gl);
+
+
+int
+main(void)
+{
+  gl_t gl;
+
+  gl_create_window(&gl, 640, 480);
+  gl_set_color(&gl, gl.screen->white_pixel, gl.screen->black_pixel);
+  loop_frames(&gl);
+  gl_destroy_window(&gl);
+}
+
 
 void
-gl_create_window(gl_t *gl, uint16_t width, uint16_t height)
+gl_create_window(gl_t *gl, u16_t width, u16_t height)
 {
-  uint32_t value_mask;
-  uint32_t value_list[2];
+  u32_t value_mask;
+  u32_t value_list[2];
 
   gl->connection = xcb_connect(NULL, NULL);
   gl->screen = xcb_setup_roots_iterator(xcb_get_setup(gl->connection)).data;
@@ -110,8 +133,8 @@ gl_free_event(gl_t *gl)
 void
 gl_set_color(gl_t *gl, uint32_t fgcolor, uint32_t bgcolor)
 {
-  uint32_t value_mask;
-  uint32_t value_list[2];
+  u32_t value_mask;
+  u32_t value_list[2];
 
   value_mask = XCB_GC_FOREGROUND
              | XCB_GC_BACKGROUND;
@@ -237,17 +260,4 @@ loop_frames(gl_t *gl)
     }
     gl_free_event(gl);
   }
-}
-
-int
-main(void)
-{
-  gl_t gl;
-
-  gl_create_window(&gl, 640, 480);
-  gl_set_color(&gl, gl.screen->white_pixel, gl.screen->black_pixel);
-  loop_frames(&gl);
-  gl_destroy_window(&gl);
-
-  return 0;
 }
