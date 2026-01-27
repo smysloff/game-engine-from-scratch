@@ -1,80 +1,7 @@
 
-// file: examples/xcb/fonts.c
+// file: examples/xcb/gl.c
 
-#include <xcb/xcb.h>
-#include "core/core.h"
-
-
-// KEY codes
-
-#ifdef __APPLE__
-  #define KEY_ESC 41 // MacOS HID
-#else
-  #define KEY_ESC 9  // Linux X11
-#endif
-
-
-// gl structure (Graphic Library)
-
-typedef struct gl_s gl_t;
-typedef void (*gl_event_handler_t)(gl_t *gl);
-
-typedef struct gl_s
-{
-  // game loop switcher
-  bool_t loop;
-
-  // X connection entities
-  xcb_connection_t *connection;
-  xcb_screen_t *screen;
-  xcb_window_t window;
-  xcb_generic_event_t *event;
-
-  // default font
-  xcb_font_t font;
-  xcb_gcontext_t gcontext;
-
-  // handlers
-  gl_event_handler_t expose_handler;
-  gl_event_handler_t key_press_handler;
-} gl_t;
-
-
-bool_t gl_create_window(gl_t *gl, u16_t width, u16_t height, const char *fontname);
-void   gl_destroy_window(gl_t *gl);
-
-void   gl_open_font(gl_t *gl, const char *fontname);
-void   gl_close_font(gl_t *gl);
-
-void   gl_loop_frames(gl_t *gl);
-
-void   expose_handler(gl_t *gl);
-void   key_press_handler(gl_t *gl);
-
-void   draw_frame(gl_t *gl);
-
-
-int
-main(void)
-{
-  gl_t gl;
-
-  gl.expose_handler = expose_handler;
-  gl.key_press_handler = key_press_handler;
-
-  if (!gl_create_window(&gl, 640, 480,
-        "-xos4-terminus-medium-r-normal--32-320-72-72-c-160-iso10646-1"))
-  {
-    print_error("Cannot connect to X server");
-    return -1;
-  }
-
-  gl_loop_frames(&gl);
-
-  gl_destroy_window(&gl);
-
-  return 0;
-}
+#include "./gl.h"
 
 
 bool_t
@@ -156,11 +83,11 @@ gl_open_font(gl_t *gl, const char *fontname)
   if (!fontname || error)
   {
     if (!fontname)
-      print_error("No font specified. Trying 'fixed' as default.");
+      print_string_endl("warning: No font specified. Trying 'fixed' as default.");
 
     else if (error)
     {
-      print_error("Font not found! Trying 'fixed' instead.");
+      print_string_endl("warning: Font not found! Trying 'fixed' instead.");
       free(error);
     }
 
@@ -203,9 +130,6 @@ gl_close_font(gl_t *gl)
 void
 gl_loop_frames(gl_t *gl)
 {
-  draw_frame(gl);
-  print_log("press ESC to exit");
-
   for (gl->loop = true; gl->loop; )
   {
 
@@ -232,45 +156,7 @@ gl_loop_frames(gl_t *gl)
 
     } // while
 
-    usleep(10000);
+    //usleep(10000);
   }
 
-}
-
-
-void
-expose_handler(gl_t *gl)
-{
-  xcb_expose_event_t *e = (xcb_expose_event_t *) gl->event;
-  (void) e;
-  draw_frame(gl);
-}
-
-void
-key_press_handler(gl_t *gl)
-{
-  xcb_key_press_event_t *e = (xcb_key_press_event_t *) gl->event;
-
-  print_string("log: pressed key with code: ");
-  print_number(e->detail);
-  print_endl();
-
-  if (e->detail == KEY_ESC)
-    gl->loop = false;
-}
-
-void
-draw_frame(gl_t *gl)
-{
-  const char msg[] = "Hello, World!";
-
-  xcb_image_text_8(
-    gl->connection,
-    string_length(msg),
-    gl->window,
-    gl->gcontext,
-    64, 64, msg
-  );
-
-  xcb_flush(gl->connection);
 }
