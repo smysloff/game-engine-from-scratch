@@ -1,7 +1,8 @@
 examples/core/io
 examples/core/vector
-examples/xcb/open_window.c
-examples/xcb/wait_events.c
-examples/xcb/poll_events.c
-examples/xcb/draw_api.c
-examples/xcb/window_management.c
+examples/xcb/open_window
+examples/xcb/wait_events
+examples/xcb/poll_events
+examples/xcb/draw_api
+examples/xcb/window_management
+examples/xcb/bit_blit

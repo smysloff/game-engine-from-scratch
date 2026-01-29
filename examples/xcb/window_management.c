@@ -1,6 +1,7 @@
 
 // file: examples/xcb/window_management.c
 
+
 #include <xcb/xcb.h>
 #include "core/core.h"
 
@@ -102,7 +103,7 @@ main(void)
 
 
   // Set size hints for window managers
-  // i3 ignores this
+  // (! i3 ignores this)
 
   xcb_intern_atom_cookie_t  normal_hints_cookie;
   xcb_intern_atom_reply_t  *normal_hints_reply;
@@ -411,4 +412,10 @@ main(void)
   connection = NULL;
   screen = NULL;
   setup = NULL;
+
+
+
+  // Exit success
+
+  return 0;
 }

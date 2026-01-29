@@ -13,7 +13,8 @@ SOURCES := core/io.c \
 					 xcb/poll_events.c \
 					 xcb/draw_api.c \
 					 xcb/font.c \
-					 xcb/window_management.c
+					 xcb/window_management.c \
+					 xcb/bit_blit.c
 
 LIBS := xcb
 
