@@ -4,4 +4,4 @@ examples/xcb/open_window.c
 examples/xcb/wait_events.c
 examples/xcb/poll_events.c
 examples/xcb/draw_api.c
-examples/xcb/_simple_draw.c
+examples/xcb/window_management.c
