@@ -5,6 +5,9 @@
 
 #include "./types.h"
 
+#define array_length(array) (sizeof(array) / sizeof(array[0]))
+
+
 static inline i64_t
 absolute_number(i64_t n)
 {
