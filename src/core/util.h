@@ -5,6 +5,8 @@
 
 #include "./types.h"
 
+
+#define unused(variable) ((void) variable)
 #define array_length(array) (sizeof(array) / sizeof(array[0]))
 
 

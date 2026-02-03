@@ -36,7 +36,7 @@ main(void)
 
   if (!connection)
   {
-    perror("xcb_connect()");
+    print_error_endl("xcb_connect()");
     return EXIT_FAILURE;
   }
 
@@ -66,7 +66,7 @@ main(void)
 
   if (!screen)
   {
-    print_error("Cannot get screen");
+    print_error_endl("Cannot get screen");
     return -1;
   }
 
@@ -127,7 +127,7 @@ main(void)
 
   if (!normal_hints_reply)
   {
-    print_error("Cannot get atom WM_NORMAL_HINTS");
+    print_error_endl("Cannot get atom WM_NORMAL_HINTS");
     return -1;
   }
 
@@ -201,13 +201,13 @@ main(void)
 
   if (!protocols_reply)
   {
-    print_error("Cannot get WM_PROTOCOLS");
+    print_error_endl("Cannot get WM_PROTOCOLS");
     return -1;
   }
 
   if (!delete_reply)
   {
-    print_error("Cannot get WM_DELTE_WINDOW");
+    print_error_endl("Cannot get WM_DELTE_WINDOW");
     return -1;
   }
 
@@ -257,7 +257,7 @@ main(void)
 
   if (!wm_class_reply)
   {
-    print_error("Cannot get atom WM_CLASS");
+    print_error_endl("Cannot get atom WM_CLASS");
     return -1;
   }
 
@@ -301,7 +301,7 @@ main(void)
 
   if (!wm_name_reply)
   {
-    print_error("Cannot get atom WM_NAME");
+    print_error_endl("Cannot get atom WM_NAME");
     return -1;
   }
 

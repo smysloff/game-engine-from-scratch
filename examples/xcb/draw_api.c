@@ -157,16 +157,11 @@ expose_handler(gl_t *gl)
 {
   xcb_expose_event_t *e = (xcb_expose_event_t *) gl->event;
 
-  print_string("log: expose window ");
-  print_number(e->window);
-  print_endl();
+  print_format_endl("log: expose window %d", e->window);
 
-  print_string("log: region to be redrawn at location (");
-  print_number(e->x); print_char(','); print_number(e->y); print_string("), ");
-  print_string("width dimension (");
-  print_number(e->width); print_char(','); print_number(e->height);
-  print_string(")");
-  print_endl();
+  print_format_endl(
+    "log: region to be redrawn at location (%d,%d), width dimension (%d,%d)",
+      e->x, e->y, e->width, e->height);
 }
 
 void
@@ -174,9 +169,7 @@ key_press_handler(gl_t *gl)
 {
   xcb_key_press_event_t *e = (xcb_key_press_event_t *) gl->event;
 
-  print_string("log: pressed key with code: ");
-  print_number(e->detail);
-  print_endl();
+  print_format_endl("log: pressed key with code: %d", e->detail);
 
   if (e->detail == KEY_ESC)
     gl->loop = false;
@@ -238,7 +231,7 @@ void
 loop_frames(gl_t *gl)
 {
   draw_frame(gl);
-  print_log("press ESC key to exit");
+  print_log_endl("press ESC key to exit");
 
   for (gl->loop = true; gl->loop; )
   {
@@ -249,12 +242,12 @@ loop_frames(gl_t *gl)
         case XCB_EXPOSE:
           expose_handler(gl);
           draw_frame(gl);
-          print_log("press ESC key to exit");
+          print_log_endl("press ESC key to exit");
           break;
 
         case XCB_KEY_PRESS:
           key_press_handler(gl);
-          print_log("press ESC key to exit");
+          print_log_endl("press ESC key to exit");
           break;
       }
     }

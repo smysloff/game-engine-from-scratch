@@ -65,7 +65,7 @@ main(void)
   if (!gl_create_window(&gl, 640, 480,
         "-xos4-terminus-medium-r-normal--32-320-72-72-c-160-iso10646-1"))
   {
-    print_error("Cannot connect to X server");
+    print_error_endl("Cannot connect to X server");
     return -1;
   }
 
@@ -156,11 +156,11 @@ gl_open_font(gl_t *gl, const char *fontname)
   if (!fontname || error)
   {
     if (!fontname)
-      print_error("No font specified. Trying 'fixed' as default.");
+      print_error_endl("No font specified. Trying 'fixed' as default.");
 
     else if (error)
     {
-      print_error("Font not found! Trying 'fixed' instead.");
+      print_error_endl("Font not found! Trying 'fixed' instead.");
       free(error);
     }
 
@@ -204,7 +204,7 @@ void
 gl_loop_frames(gl_t *gl)
 {
   draw_frame(gl);
-  print_log("press ESC to exit");
+  print_log_endl("press ESC to exit");
 
   for (gl->loop = true; gl->loop; )
   {
@@ -251,9 +251,7 @@ key_press_handler(gl_t *gl)
 {
   xcb_key_press_event_t *e = (xcb_key_press_event_t *) gl->event;
 
-  print_string("log: pressed key with code: ");
-  print_number(e->detail);
-  print_endl();
+  print_format_endl("log: pressed key with code: %d", e->detail);
 
   if (e->detail == KEY_ESC)
     gl->loop = false;

@@ -6,22 +6,34 @@
 #include "./types.h"
 
 isize_t print_char(char c);
-isize_t print_char_fd(char c, i32_t fd);
+isize_t print_char_fd(i32_t fd, char c);
 isize_t print_char_endl(char c);
+
 isize_t print_endl(void);
 isize_t print_endl_fd(i32_t fd);
+
 isize_t print_number(i64_t n);
-isize_t print_number_fd(i64_t n, i32_t fd);              // fd ?
-isize_t print_string(const char *s);                     // fd 1
-isize_t print_string_fd(const char *s, i32_t fd);        // fd ?
-isize_t print_string_endl(const char *s);                // fd 1, '\n'
-isize_t print_log(const char *s);                        // fd 1, '\n', 'log: '
-isize_t print_log_fd(const char *s, i32_t fd);           // fd ?,       'log: '
-isize_t print_error(const char *s);                      // fd 2, '\n', 'error: '
-isize_t print_error_fd(const char *s, i32_t fd);         // fd ?,       'error: '
-isize_t print_format(const char *fmt, ...);              //
-isize_t print_format_fd(i32_t fd, const char *fmt, ...); //
-isize_t print_format_endl(const char *fmt, ...);         //
+isize_t print_number_fd(i32_t fd, i64_t n);
+isize_t print_number_endl(i64_t n);
+
+isize_t print_string(const char *s);
+isize_t print_string_fd(i32_t fd, const char *s);
+isize_t print_string_endl(const char *s);
+
+isize_t print_log(const char *s);
+isize_t print_log_fd(i32_t fd, const char *s);
+isize_t print_log_endl(const char *s);
+
+isize_t print_error(const char *s);
+isize_t print_error_fd(i32_t fd, const char *s);
+isize_t print_error_endl(const char *s);
+
+isize_t print_format(const char *fmt, ...);
+isize_t print_format_fd(i32_t fd, const char *fmt, ...);
+isize_t print_format_endl(const char *fmt, ...);
+
+int     printf_format(const char *restrict fmt, ...);
+int     dprintf_format(int fd, const char *restrict fmt, ...);
 
 
 #ifdef CORE_IO_IMPLEMENTATION
@@ -33,11 +45,11 @@ isize_t print_format_endl(const char *fmt, ...);         //
 isize_t
 print_char(char c)
 {
-  return print_char_fd(c, 1);
+  return print_char_fd(1, c);
 }
 
 isize_t
-print_char_fd(char c, i32_t fd)
+print_char_fd(i32_t fd, char c)
 {
   return write(fd, &c, 1);
 }
@@ -46,10 +58,13 @@ isize_t
 print_char_endl(char c)
 {
   isize_t bytes = 0;
+
   bytes += print_char(c);
   bytes += print_endl();
+
   return bytes;
 }
+
 
 isize_t
 print_endl(void)
@@ -60,24 +75,25 @@ print_endl(void)
 isize_t
 print_endl_fd(i32_t fd)
 {
-  return print_char_fd('\n', fd);
+  return print_char_fd(fd, '\n');
 }
+
 
 isize_t
 print_number(i64_t n)
 {
-  return print_number_fd(n, 1);
+  return print_number_fd(1, n);
 }
 
 isize_t
-print_number_fd(i64_t n, i32_t fd)
+print_number_fd(i32_t fd, i64_t n)
 {
   char s[22] = { 0 };
   isize_t left = 0;
   isize_t right = number_length(n) - 1;
 
   if (n == 0)
-    return print_char('0');
+    return print_char_fd(fd, '0');
 
   if (n < 0)
     s[left++] = '-';
@@ -89,37 +105,31 @@ print_number_fd(i64_t n, i32_t fd)
     n /= 10;
   }
 
-  return print_string_fd(s, fd);
+  return print_string_fd(fd, s);
 }
 
 isize_t
-print_log(const char *s)
-{
-  return print_log_fd(s, 1);
-}
-
-isize_t
-print_log_fd(const char *s, i32_t fd)
+print_number_endl(i64_t n)
 {
   isize_t bytes = 0;
 
-  bytes += print_string_fd("log: ", fd);
-  bytes += print_string_fd(s, fd);
-  bytes += print_endl_fd(fd);
+  bytes += print_number(n);
+  bytes += print_endl();
 
   return bytes;
 }
 
-isize_t
-print_string_fd(const char *s, i32_t fd)
-{
-  return write(fd, s, string_length(s));
-}
 
 isize_t
 print_string(const char *s)
 {
-  return print_string_fd(s, 1);
+  return print_string_fd(1, s);
+}
+
+isize_t
+print_string_fd(i32_t fd, const char *s)
+{
+  return write(fd, s, string_length(s));
 }
 
 isize_t
@@ -133,16 +143,394 @@ print_string_endl(const char *s)
   return bytes;
 }
 
+
+isize_t
+print_log(const char *s)
+{
+  return print_log_fd(1, s);
+}
+
+isize_t
+print_log_fd(i32_t fd, const char *s)
+{
+  isize_t bytes = 0;
+
+  bytes += print_string_fd(fd, "log: ");
+  bytes += print_string_fd(fd, s);
+
+  return bytes;
+}
+
+isize_t
+print_log_endl(const char *s)
+{
+  isize_t bytes = 0;
+
+  bytes += print_log(s);
+  bytes += print_endl();
+
+  return bytes;
+}
+
+
 isize_t
 print_error(const char *s)
 {
+  return print_error_fd(2, s);
+}
+
+isize_t
+print_error_fd(i32_t fd, const char *s)
+{
   isize_t bytes = 0;
   const char prefix[] = "error: ";
-  char endl = '\n';
 
-  bytes += write(2, prefix, string_length(prefix));
-  bytes += write(2, s, string_length(s));
-  bytes += write(2, &endl, 1);
+  bytes += write(fd, prefix, string_length(prefix));
+  bytes += write(fd, s, string_length(s));
+
+  return bytes;
+}
+
+isize_t
+print_error_endl(const char *s)
+{
+  isize_t bytes = 0;
+
+  bytes += print_error(s);
+  bytes += print_endl_fd(2);
+
+  return bytes;
+}
+
+
+isize_t
+print_format(const char *fmt, ...)
+{
+  va_list args;
+
+  i64_t  d;
+  char   c;
+  char  *s;
+
+  va_start(args, fmt);
+  isize_t bytes = 0;
+
+  if (fmt)
+  {
+    while (*fmt)
+    {
+      if (*fmt == '%')
+      {
+        ++fmt;
+        switch (*fmt)
+        {
+          case 'd':
+          {
+            d = va_arg(args, i64_t);
+            bytes += print_number(d);
+            break;
+          }
+
+          case 'c':
+          {
+            c = (char) va_arg(args, i32_t);
+            bytes += print_char(c);
+            break;
+          }
+
+          case 's':
+          {
+            s = va_arg(args, char *);
+            bytes += print_string(s);
+            break;
+          }
+
+          default:
+          {
+            print_error("Cannot process symbol ");
+            print_char_fd(2, *fmt);
+            print_endl_fd(2);
+            exit(-1);
+          }
+        }
+      }
+
+      else
+      {
+        bytes += print_char(*fmt);
+      }
+
+      ++fmt;
+    }
+  }
+
+  va_end(args);
+
+  return bytes;
+}
+
+isize_t
+print_format_fd(i32_t fd, const char *fmt, ...)
+{
+  va_list args;
+
+  i64_t  d;
+  char   c;
+  char  *s;
+
+  va_start(args, fmt);
+  isize_t bytes = 0;
+
+  if (fmt)
+  {
+    while (*fmt)
+    {
+      if (*fmt == '%')
+      {
+        ++fmt;
+        switch (*fmt)
+        {
+          case 'd':
+          {
+            d = va_arg(args, i64_t);
+            bytes += print_number_fd(fd, d);
+            break;
+          }
+
+          case 'c':
+          {
+            c = (char) va_arg(args, i32_t);
+            bytes += print_char_fd(fd, c);
+            break;
+          }
+
+          case 's':
+          {
+            s = va_arg(args, char *);
+            bytes += print_string_fd(fd, s);
+            break;
+          }
+
+          default:
+          {
+            print_error("Cannot process symbol ");
+            print_char_fd(2, *fmt);
+            print_endl_fd(2);
+            exit(-1);
+          }
+        }
+      }
+
+      else
+      {
+        bytes += print_char_fd(fd, *fmt);
+      }
+
+      ++fmt;
+    }
+  }
+
+  va_end(args);
+
+  return bytes;
+}
+
+isize_t
+print_format_endl(const char *fmt, ...)
+{
+  va_list args;
+
+  i64_t  d;
+  char   c;
+  char  *s;
+
+  va_start(args, fmt);
+  isize_t bytes = 0;
+
+  if (fmt)
+  {
+    while (*fmt)
+    {
+      if (*fmt == '%')
+      {
+        ++fmt;
+        switch (*fmt)
+        {
+          case 'd':
+          {
+            d = va_arg(args, i64_t);
+            bytes += print_number(d);
+            break;
+          }
+
+          case 'c':
+          {
+            c = (char) va_arg(args, i32_t);
+            bytes += print_char(c);
+            break;
+          }
+
+          case 's':
+          {
+            s = va_arg(args, char *);
+            bytes += print_string(s);
+            break;
+          }
+
+          default:
+          {
+            print_error("Cannot process symbol ");
+            print_char_fd(2, *fmt);
+            print_endl_fd(2);
+            exit(-1);
+          }
+        }
+      }
+
+      else
+      {
+        bytes += print_char(*fmt);
+      }
+
+      ++fmt;
+    }
+  }
+
+  va_end(args);
+
+  bytes += print_endl();
+
+  return bytes;
+}
+
+int
+print_format_compatible(const char *restrict fmt, ...)
+{
+  va_list args;
+
+  i64_t  d;
+  char   c;
+  char  *s;
+
+  va_start(args, fmt);
+  int bytes = 0;
+
+  if (fmt)
+  {
+    while (*fmt)
+    {
+      if (*fmt == '%')
+      {
+        ++fmt;
+        switch (*fmt)
+        {
+          case 'd':
+          {
+            d = va_arg(args, i64_t);
+            bytes += print_number(d);
+            break;
+          }
+
+          case 'c':
+          {
+            c = (char) va_arg(args, i32_t);
+            bytes += print_char(c);
+            break;
+          }
+
+          case 's':
+          {
+            s = va_arg(args, char *);
+            bytes += print_string(s);
+            break;
+          }
+
+          default:
+          {
+            print_error("Cannot process symbol ");
+            print_char_fd(2, *fmt);
+            print_endl_fd(2);
+            exit(-1);
+          }
+        }
+      }
+
+      else
+      {
+        bytes += print_char(*fmt);
+      }
+
+      ++fmt;
+    }
+  }
+
+  va_end(args);
+
+  return bytes;
+}
+
+int
+print_format_fd_compatible(int fd, const char *restrict fmt, ...)
+{
+  va_list args;
+
+  i64_t  d;
+  char   c;
+  char  *s;
+
+  va_start(args, fmt);
+  int bytes = 0;
+
+  if (fmt)
+  {
+    while (*fmt)
+    {
+      if (*fmt == '%')
+      {
+        ++fmt;
+        switch (*fmt)
+        {
+          case 'd':
+          {
+            d = va_arg(args, i64_t);
+            bytes += print_number_fd(fd, d);
+            break;
+          }
+
+          case 'c':
+          {
+            c = (char) va_arg(args, i32_t);
+            bytes += print_char_fd(fd, c);
+            break;
+          }
+
+          case 's':
+          {
+            s = va_arg(args, char *);
+            bytes += print_string_fd(fd, s);
+            break;
+          }
+
+          default:
+          {
+            print_error("Cannot process symbol ");
+            print_char_fd(2, *fmt);
+            print_endl_fd(2);
+            exit(-1);
+          }
+        }
+      }
+
+      else
+      {
+        bytes += print_char_fd(fd, *fmt);
+      }
+
+      ++fmt;
+    }
+  }
+
+  va_end(args);
 
   return bytes;
 }

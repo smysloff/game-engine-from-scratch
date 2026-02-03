@@ -7,6 +7,7 @@ RM := rm -f
 INCLUDES := -I../src
 
 SOURCES := core/io.c \
+					 core/print_format.c \
 					 core/vector.c \
 					 xcb/open_window.c \
 					 xcb/wait_events.c \

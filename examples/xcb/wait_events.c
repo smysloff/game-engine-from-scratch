@@ -18,8 +18,8 @@ main(void)
   xcb_window_t window;
   xcb_generic_event_t *event;
 
-  uint32_t cw_window_mask;
-  uint32_t cw_window_list[2];
+  u32_t cw_window_mask;
+  u32_t cw_window_list[2];
 
   connection = xcb_connect(NULL, NULL);
   screen = xcb_setup_roots_iterator(xcb_get_setup(connection)).data;
@@ -46,7 +46,7 @@ main(void)
   xcb_map_window(connection, window);
   xcb_flush(connection);
 
-  print_log("press ESC key to exit");
+  print_log_endl("press ESC key to exit");
 
   for (bool_t loop = true; loop && (event = xcb_wait_for_event(connection)); )
   {
@@ -56,18 +56,24 @@ main(void)
       {
         xcb_expose_event_t *e = (xcb_expose_event_t *) event;
 
-        print_string("log: expose window ");
-        print_number(e->window);
-        print_endl();
+        //print_string("log: expose window ");
+        //print_number(e->window);
+        //print_endl();
 
-        print_string("log: region to be redrawn at location (");
-        print_number(e->x); print_char(','); print_number(e->y); print_string("), ");
-        print_string("width dimension (");
-        print_number(e->width); print_char(','); print_number(e->height);
-        print_string(")");
-        print_endl();
+        print_format_endl("log: expose window %d", e->window);
 
-        print_log("press ESC key to exit");
+        //print_string("log: region to be redrawn at location (");
+        //print_number(e->x); print_char(','); print_number(e->y); print_string("), ");
+        //print_string("width dimension (");
+        //print_number(e->width); print_char(','); print_number(e->height);
+        //print_string(")");
+        //print_endl();
+
+        print_format_endl(
+          "log: region to be redrawn at location (%d,%d), width dimension (%d,%d)",
+            e->x, e->y, e->width, e->height);
+
+        print_log_endl("press ESC key to exit");
 
         break;
       }
@@ -76,14 +82,16 @@ main(void)
       {
         xcb_key_press_event_t *e = (xcb_key_press_event_t *) event;
 
-        print_string("log: pressed key with code: ");
-        print_number(e->detail);
-        print_endl();
+        //print_string("log: pressed key with code: ");
+        //print_number(e->detail);
+        //print_endl();
+
+        print_format_endl("log: pressed key with code: %d", e->detail);
 
         if (e->detail == KEY_ESC)
           loop = false;
 
-        print_log("press ESC key to exit");
+        print_log_endl("press ESC key to exit");
 
         break;
       }

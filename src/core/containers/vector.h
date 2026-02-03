@@ -54,13 +54,13 @@ vector_init(vector_t *v, usize_t capacity, usize_t item_size)
 {
   if (v == NULL)
   {
-    print_error("vector can't be NULL in vector_init()");
+    print_error_endl("vector can't be NULL in vector_init()");
     return false;
   }
 
   if (item_size == 0)
   {
-    print_error("item_size can't be 0 in vector_init()");
+    print_error_endl("item_size can't be 0 in vector_init()");
     return false;
   }
 
@@ -73,7 +73,7 @@ vector_init(vector_t *v, usize_t capacity, usize_t item_size)
   {
     if (is_overflow(v, capacity))
     {
-      print_error("size overflow in vector_init()");
+      print_error_endl("size overflow in vector_init()");
       v->capacity = 0;
       return false;
     }
@@ -82,7 +82,7 @@ vector_init(vector_t *v, usize_t capacity, usize_t item_size)
 
     if (v->data == NULL)
     {
-      print_error("malloc error in vector_init()");
+      print_error_endl("malloc error in vector_init()");
       v->capacity = 0;
       return false;
     }
@@ -106,7 +106,7 @@ vector_resize(vector_t *v, usize_t new_capacity)
 
   if (is_overflow(v, new_capacity))
   {
-    print_error("size overflow in vector_resize()");
+    print_error_endl("size overflow in vector_resize()");
     return false;
   }
 
@@ -115,7 +115,7 @@ vector_resize(vector_t *v, usize_t new_capacity)
 
   if (!new_data)
   {
-    print_error("realloc error in vector_resize()");
+    print_error_endl("realloc error in vector_resize()");
     return false;
   }
 
@@ -157,7 +157,7 @@ vector_push(vector_t *v, void *value)
 
     if (new_capacity <= v->capacity)
     {
-      print_error("size overflow in vector_push()");
+      print_error_endl("size overflow in vector_push()");
       return v->count;
     }
 

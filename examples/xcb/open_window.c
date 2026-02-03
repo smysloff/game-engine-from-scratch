@@ -1,10 +1,11 @@
 
-// examples/xcb/01.c
+// examples/xcb/open_window.c
 
 #include <xcb/xcb.h>
 #include "core/core.h"
 
-int main(void)
+int
+main(void)
 {
   xcb_connection_t *connection = xcb_connect(NULL, NULL);
 
@@ -23,7 +24,7 @@ int main(void)
   xcb_map_window(connection, window);
   xcb_flush(connection);
 
-  print_log("wait for 5 seconds");
+  print_log_endl("wait for 5 seconds");
   sleep(5);
 
   xcb_disconnect(connection);

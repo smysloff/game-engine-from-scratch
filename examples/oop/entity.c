@@ -1,4 +1,6 @@
 
+// file: examples/oop/entity.c
+
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>

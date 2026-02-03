@@ -3,8 +3,8 @@
 
 #include "core/core.h"
 
-int main(void)
+int
+main(void)
 {
-  print_string("Hello, World!");
-  print_endl();
+  print_string_endl("Hello, World!");
 }
