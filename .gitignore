@@ -1,4 +1,5 @@
 examples/core/io
+examples/core/print_format
 examples/core/vector
 examples/xcb/open_window
 examples/xcb/wait_events
