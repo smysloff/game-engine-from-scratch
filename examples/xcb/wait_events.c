@@ -56,24 +56,11 @@ main(void)
       {
         xcb_expose_event_t *e = (xcb_expose_event_t *) event;
 
-        //print_string("log: expose window ");
-        //print_number(e->window);
-        //print_endl();
+        print_log_endl("expose window %d", e->window);
 
-        print_format_endl("log: expose window %d", e->window);
-
-        //print_string("log: region to be redrawn at location (");
-        //print_number(e->x); print_char(','); print_number(e->y); print_string("), ");
-        //print_string("width dimension (");
-        //print_number(e->width); print_char(','); print_number(e->height);
-        //print_string(")");
-        //print_endl();
-
-        print_format_endl(
-          "log: region to be redrawn at location (%d,%d), width dimension (%d,%d)",
+        print_log_endl(
+          "region to be redrawn at location (%d,%d), width dimension (%d,%d)",
             e->x, e->y, e->width, e->height);
-
-        print_log_endl("press ESC key to exit");
 
         break;
       }
@@ -82,16 +69,10 @@ main(void)
       {
         xcb_key_press_event_t *e = (xcb_key_press_event_t *) event;
 
-        //print_string("log: pressed key with code: ");
-        //print_number(e->detail);
-        //print_endl();
-
-        print_format_endl("log: pressed key with code: %d", e->detail);
+        print_log_endl("pressed key with code: %d", e->detail);
 
         if (e->detail == KEY_ESC)
           loop = false;
-
-        print_log_endl("press ESC key to exit");
 
         break;
       }

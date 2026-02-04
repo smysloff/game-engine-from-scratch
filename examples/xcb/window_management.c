@@ -333,7 +333,7 @@ main(void)
   loop = true;
 
 
-  print_string_endl("press ESC to EXIT");
+  print_log_endl("press ESC to EXIT");
 
   while (loop)
   {
@@ -360,10 +360,7 @@ main(void)
           if (key->detail == 9)
             loop = false;
 
-
-          print_string("key: ");
-          print_number(key->detail);
-          print_endl();
+          print_log_endl("key %d", key->detail);
 
           break;
         }
@@ -377,7 +374,7 @@ main(void)
           if (delete_reply && delete_reply->atom == client->data.data32[0])
           {
             loop = false;
-            print_string_endl("Received WM_DELETE_WINDOW message");
+            print_log_endl("Received WM_DELETE_WINDOW message");
           }
 
           break;
@@ -386,7 +383,7 @@ main(void)
         case XCB_DESTROY_NOTIFY:
         {
           loop = false;
-          print_string_endl("Received DESTROY_NOTIFY");
+          print_log_endl("Received DESTROY_NOTIFY");
           break;
         }
 

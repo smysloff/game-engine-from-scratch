@@ -3,7 +3,8 @@
 
 #include "core/core.h"
 
-int main(void)
+int
+main(void)
 {
   vector_t v;
 
@@ -12,26 +13,23 @@ int main(void)
   for (i32_t i = 1; i < 10; ++i)
     vector_push(&v, &i);
 
-  print_number(v.count);
-  print_string(" ");
-  print_number(v.capacity);
-  print_string(" ");
-  print_number(vector_count_size(&v));
-  print_string(" ");
-  print_number(vector_capacity_size(&v));
-  print_endl();
-
+  print_format_endl(
+    "%d %d %d %d",
+    v.count,
+    v.capacity,
+    vector_count_size(&v),
+    vector_capacity_size(&v)
+  );
 
   vector_shrink(&v);
 
-  print_number(v.count);
-  print_string(" ");
-  print_number(v.capacity);
-  print_string(" ");
-  print_number(vector_count_size(&v));
-  print_string(" ");
-  print_number(vector_capacity_size(&v));
-  print_endl();
+  print_format_endl(
+    "%d %d %d %d",
+    v.count,
+    v.capacity,
+    vector_count_size(&v),
+    vector_capacity_size(&v)
+  );
 
   for (usize_t i = 0; i < v.count; ++i)
   {

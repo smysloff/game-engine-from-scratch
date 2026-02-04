@@ -251,7 +251,7 @@ key_press_handler(gl_t *gl)
 {
   xcb_key_press_event_t *e = (xcb_key_press_event_t *) gl->event;
 
-  print_format_endl("log: pressed key with code: %d", e->detail);
+  print_log_endl("pressed key with code %d", e->detail);
 
   if (e->detail == KEY_ESC)
     gl->loop = false;
