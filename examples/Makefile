@@ -19,7 +19,7 @@ SOURCES := core/io.c \
 
 LIBS := xcb xcb-image
 
-CFLAGS := -Wall -Werror -Wextra -O3
+CFLAGS := -Wall -Werror -Wextra -g #-O3
 LFLAGS := $$(pkg-config --cflags --libs $(LIBS))
 
 PROGRAMS := $(basename $(SOURCES))
