@@ -17,7 +17,7 @@ SOURCES := core/io.c \
 					 xcb/window_management.c \
 					 xcb/bit_blit.c
 
-LIBS := xcb
+LIBS := xcb xcb-image
 
 CFLAGS := -Wall -Werror -Wextra -O3
 LFLAGS := $$(pkg-config --cflags --libs $(LIBS))
