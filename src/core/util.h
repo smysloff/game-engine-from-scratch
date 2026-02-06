@@ -6,6 +6,7 @@
 #include "./types.h"
 
 
+#define abs(n) ((n) < 0 ? (-n) : (n))
 #define unused(variable) ((void) variable)
 #define array_length(array) (sizeof(array) / sizeof(array[0]))
 

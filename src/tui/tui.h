@@ -1,9 +1,15 @@
 
-// src/tui/tui_window.c
+// src/tui/tui.c
 
-#include "../core/core.h"
+#pragma once
 
-#define abs(n) ((n) < 0 ? (-n) : (n))
+#include "../core/dependencies.h"
+#include "../core/types.h"
+#include "../core/util.h"
+
+#define CORE_IO_IMPLEMENTATION
+#include "../core/io.h"
+
 
 typedef struct
 {
@@ -24,23 +30,8 @@ void tui_set_border(tui_window_t *window, char c, u32_t size);
 void tui_put_pixel(tui_window_t *window, char c, i32_t x, i32_t y);
 void tui_draw_line(tui_window_t *window, char c, i32_t x0, i32_t y0, i32_t x1, i32_t y1);
 
-int
-main(void)
-{
-  tui_window_t win;
 
-  tui_window_create(&win, 33, 15);
-  tui_set_border(&win, '%', 1);
-  tui_window_fill(&win, ' ');
-  tui_put_pixel(&win, '@', 15, 9);
-  tui_draw_line(&win, '#', 3, 2, 23, 6);
-  tui_draw_line(&win, '?', 4, 11, 30, 7);
-  tui_window_draw(&win, 0, 0);
-  tui_window_destroy(&win);
-
-  return 0;
-}
-
+#ifdef TUI_IMPLEMENTATION
 
 static void
 tui_draw_horizontal_border(tui_window_t *window, u32_t x_size, u32_t y_size)
@@ -105,7 +96,7 @@ void
 tui_window_fill(tui_window_t *window, char c)
 {
   assert(window);
-  for (size_t i = 0; i < window->byte_size; ++i)
+  for (u32_t i = 0; i < window->byte_size; ++i)
     window->buffer[i] = c;
 }
 
@@ -184,3 +175,5 @@ tui_draw_line(tui_window_t *window, char c, i32_t x0, i32_t y0, i32_t x1, i32_t 
     if (e2 <  dx) { err += dx; y0 += sy; }
   }
 }
+
+#endif

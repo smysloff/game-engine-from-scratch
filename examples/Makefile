@@ -2,13 +2,14 @@
 # file: examples/Makefile
 
 CC := gcc
-RM := rm -f
+RM := rm -rf
 
 INCLUDES := -I../src
 
 SOURCES := core/io.c \
 					 core/print_format.c \
 					 core/vector.c \
+					 tui/simple.c \
 					 xcb/open_window.c \
 					 xcb/wait_events.c \
 					 xcb/poll_events.c \
