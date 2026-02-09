@@ -16,7 +16,8 @@ SOURCES := core/io.c \
 					 xcb/draw_api.c \
 					 xcb/font.c \
 					 xcb/window_management.c \
-					 xcb/bit_blit.c
+					 xcb/bit_blit.c \
+					 xcb/test.c
 
 LIBS := xcb xcb-image
 
