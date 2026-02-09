@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include <math.h>
 #include <assert.h>
 #include <stdarg.h>
 #include <stdio.h>

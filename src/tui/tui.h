@@ -22,10 +22,10 @@ typedef struct
 } tui_window_t;
 
 
-void tui_window_create(tui_window_t *window, u32_t width, u32_t height);
-void tui_window_destroy(tui_window_t *window);
-void tui_window_fill(tui_window_t *window, char c);
-void tui_window_draw(tui_window_t *window, u32_t x_size, u32_t y_size);
+void tui_create_window(tui_window_t *window, u32_t width, u32_t height);
+void tui_destroy_window(tui_window_t *window);
+void tui_fill_window(tui_window_t *window, char c);
+void tui_draw_window(tui_window_t *window, u32_t x_size, u32_t y_size);
 void tui_set_border(tui_window_t *window, char c, u32_t size);
 void tui_put_pixel(tui_window_t *window, char c, i32_t x, i32_t y);
 void tui_draw_line(tui_window_t *window, char c, i32_t x0, i32_t y0, i32_t x1, i32_t y1);
@@ -68,7 +68,7 @@ tui_draw_vertical_border(tui_window_t *window, u32_t x_size)
 
 
 void
-tui_window_create(tui_window_t *window, u32_t width, u32_t height)
+tui_create_window(tui_window_t *window, u32_t width, u32_t height)
 {
   assert(window);
   window->border_size = 0;
@@ -81,7 +81,7 @@ tui_window_create(tui_window_t *window, u32_t width, u32_t height)
 }
 
 void
-tui_window_destroy(tui_window_t *window)
+tui_destroy_window(tui_window_t *window)
 {
   assert(window);
   assert(window->buffer);
@@ -93,7 +93,7 @@ tui_window_destroy(tui_window_t *window)
 }
 
 void
-tui_window_fill(tui_window_t *window, char c)
+tui_fill_window(tui_window_t *window, char c)
 {
   assert(window);
   for (u32_t i = 0; i < window->byte_size; ++i)
@@ -101,7 +101,7 @@ tui_window_fill(tui_window_t *window, char c)
 }
 
 void
-tui_window_draw(tui_window_t *window, u32_t x_size, u32_t y_size)
+tui_draw_window(tui_window_t *window, u32_t x_size, u32_t y_size)
 {
   assert(window);
 
@@ -161,18 +161,21 @@ tui_draw_line(tui_window_t *window, char c, i32_t x0, i32_t y0, i32_t x1, i32_t 
   assert(window);
   assert(is_print(c));
 
-  i32_t dx = abs(x1 - x0);
-  i32_t dy = abs(y1 - y0);
-  i32_t sx = x0 < x1 ? 1 : -1;
-  i32_t sy = y0 < y1 ? 1 : -1;
-  i32_t err = dx - dy;
+  i32_t dx  =  absolute_number(x1 - x0);
+  i32_t dy  = -absolute_number(y1 - y0);
+  i32_t sx  =  x0 < x1 ? 1 : -1;
+  i32_t sy  =  y0 < y1 ? 1 : -1;
+  i32_t err =  dx + dy;
 
-  while (1) {
+  tui_put_pixel(window, c, x0, y0);
+
+  while (1)
+  {
     tui_put_pixel(window, c, x0, y0);
     if (x0 == x1 && y0 == y1) break;
-    i32_t e2 = err * 2;
-    if (e2 > -dy) { err -= dy; x0 += sx; }
-    if (e2 <  dx) { err += dx; y0 += sy; }
+    i32_t err2 = err * 2;
+    if (err2 >= dy) { err += dy; x0 += sx; }
+    if (err2 <= dx) { err += dx; y0 += sy; }
   }
 }
 

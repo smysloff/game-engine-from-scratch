@@ -9,7 +9,7 @@ INCLUDES := -I../src
 SOURCES := core/io.c \
 					 core/print_format.c \
 					 core/vector.c \
-					 tui/simple.c \
+					 tui/heart.c \
 					 xcb/open_window.c \
 					 xcb/wait_events.c \
 					 xcb/poll_events.c \
@@ -20,7 +20,7 @@ SOURCES := core/io.c \
 
 LIBS := xcb xcb-image
 
-CFLAGS := -Wall -Werror -Wextra -g #-O3
+CFLAGS := -Wall -Werror -Wextra -lm -g #-O3
 LFLAGS := $$(pkg-config --cflags --libs $(LIBS))
 
 PROGRAMS := $(basename $(SOURCES))
