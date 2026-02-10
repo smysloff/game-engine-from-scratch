@@ -329,7 +329,7 @@ main(void)
 
   gl_window_create(&gl, &window, 990, 540);
   gl_window_set_class_name(&gl, &window, "xcbexample\0XCBExample\0");
-  gl_winodw_set_title(&gl, &window, "XCB Example");
+  gl_window_set_title(&gl, &window, "XCB Example");
 
 
   // entity
