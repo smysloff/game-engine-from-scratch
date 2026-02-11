@@ -13,7 +13,8 @@ SOURCES := open_window.c \
 					 font.c \
 					 window_management.c \
 					 bit_blit.c \
-					 draw_blit.c
+					 draw_blit.c \
+					 cube3d.c
 
 LIBS := xcb xcb-image
 
@@ -31,8 +32,9 @@ help:
 	@echo "  make [program]  - Build specific program"
 	@echo ""
 	@echo "Available programs:"
-	@for prog in $(PROGRAMS); do \
-		echo "  - $$prog"; \
+	@i=0; for prog in $(PROGRAMS); do \
+		echo "  $$i. $$prog"; \
+		i=$$((i+1)); \
 	done
 
 clean:

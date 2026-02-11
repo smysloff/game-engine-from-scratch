@@ -9,3 +9,4 @@ examples/xcb/draw_api
 examples/xcb/window_management
 examples/xcb/bit_blit
 examples/xcb/draw_blit
+examples/xcb/cube3d
