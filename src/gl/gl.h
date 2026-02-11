@@ -1,6 +1,8 @@
 
 // file: src/gl/gl.h
 
+#pragma once
+
 #include <xcb/xcb.h>
 #include <xcb/xcb_image.h>
 #include "../core/core.h"
