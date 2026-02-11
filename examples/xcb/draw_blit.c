@@ -1,15 +1,9 @@
 
 // file: examples/xcb/draw_blit.c
 
-
 #include <xcb/xcb.h>
 #include <xcb/xcb_image.h>
 #include "core/core.h"
-
-
-const i32_t WINDOW_WIDTH  = 990;
-const i32_t WINDOW_HEIGHT = 540;
-const i32_t WINDOW_SIZE   = WINDOW_WIDTH * WINDOW_HEIGHT;
 
 
 // Key codes
@@ -26,6 +20,8 @@ const i32_t WINDOW_SIZE   = WINDOW_WIDTH * WINDOW_HEIGHT;
 #endif
 
 
+// Graphic Library
+
 typedef struct
 {
   xcb_connection_t     *connection;
@@ -41,13 +37,126 @@ typedef struct
   xcb_window_t    id;
   xcb_gcontext_t  gc;
   i32_t           width, height;
+  i32_t           size;
   i32_t           byte_size;
+  double          aspect_ratio;
   i32_t          *frame_buffer;
   xcb_image_t    *image;
   xcb_atom_t      wm_delete_atom;
 } gl_window_t;
 
 typedef u32_t color_t;
+
+
+void   gl_init(gl_context_t *gl);
+void   gl_quit(gl_context_t *gl);
+
+void   gl_create_window(gl_context_t *gl, gl_window_t *window, i32_t width, i32_t height);
+void   gl_destroy_window(gl_context_t *gl, gl_window_t *window);
+void   gl_show_window(gl_context_t *gl, gl_window_t *window);
+void   gl_blit_window(gl_context_t *gl, gl_window_t *window);
+
+void   gl_set_string_property(gl_context_t *gl, gl_window_t *window, const char *atom_name, const char *atom_value, usize_t value_size);
+
+void   gl_start(gl_context_t *gl);
+void   gl_stop(gl_context_t *gl);
+bool_t gl_is_running(gl_context_t *gl);
+
+void   gl_fill_window(gl_window_t *window, color_t color);
+void   gl_put_pixel(gl_window_t *window, i32_t x, i32_t y, color_t color);
+void   gl_draw_line(gl_window_t *window, i32_t x0, i32_t y0, i32_t x1, i32_t y1, color_t color);
+
+i32_t  gl_project_x(gl_window_t *window, double x);
+i32_t  gl_project_y(gl_window_t *window, double y);
+
+int
+main(void)
+{
+  gl_context_t gl;
+  gl_window_t  win;
+
+  const i32_t window_width  = 990;
+  const i32_t window_height = 540;
+  const char  wm_class[]    = "xcb_example\0XCB_Example\0";
+  const char  wm_name[]     = "XCB Example";
+
+
+  double vertices[][2] = {
+  //{   x ,   y  }
+    { -.65, -.35 }, // nw 0 front
+    {  .35, -.35 }, // ne 1 -----
+    {  .35,  .65 }, // se 2
+    { -.65,  .65 }, // sw 3
+    { -.35, -.65 }, // nw 4 back
+    {  .65, -.65 }, // ne 5 -----
+    {  .65,  .35 }, // se 6
+    { -.35,  .35 }, // sw 8
+  };
+
+  i32_t edges[][2] = {
+    { 0, 1 }, // nw - ne 0
+    { 1, 2 }, // ne - se 1
+    { 2, 3 }, // se - sw 2
+    { 3, 0 }, // sw - nw 3
+
+    { 4, 5 }, // nw - ne 4
+    { 5, 6 }, // ne - se 5
+    { 6, 7 }, // se - sw 6
+    { 7, 4 }, // sw - nw 7
+
+    { 0, 4 }, // side edges
+    { 1, 5 },
+    { 2, 6 },
+    { 3, 7 },
+  };
+
+
+  gl_init(&gl);
+
+  gl_create_window(&gl, &win, window_width, window_height);
+  gl_set_string_property(&gl, &win, "WM_CLASS", wm_class, sizeof(wm_class) - 1);
+  gl_set_string_property(&gl, &win, "WM_NAME", wm_name, 0);
+
+  gl_show_window(&gl, &win);
+  gl_start(&gl);
+
+  while (gl_is_running(&gl))
+  {
+    while ((gl.event = xcb_poll_for_event(gl.connection)))
+    {
+      switch (gl.event->response_type & ~0x80)
+      {
+        case XCB_KEY_PRESS:
+          xcb_key_press_event_t *key = (xcb_key_press_event_t *) gl.event;
+          if (key->detail == KEY_ESC) gl_stop(&gl);
+          break;
+      }
+
+      free(gl.event);
+    }
+
+    gl_fill_window(&win, 0x000000);
+
+
+    for (usize_t i = 0; i < array_length(edges); ++i)
+    {
+      i32_t idx0 = edges[i][0];
+      i32_t idx1 = edges[i][1];
+      i32_t x0 = gl_project_x(&win, vertices[idx0][0]);
+      i32_t y0 = gl_project_y(&win, vertices[idx0][1]);
+      i32_t x1 = gl_project_x(&win, vertices[idx1][0]);
+      i32_t y1 = gl_project_y(&win, vertices[idx1][1]);
+      gl_draw_line(&win, x0, y0, x1, y1, 0xFF00FF);
+    }
+
+
+    gl_blit_window(&gl, &win);
+
+  }
+
+  gl_destroy_window(&gl, &win);
+  gl_quit(&gl);
+}
 
 
 void
@@ -66,10 +175,7 @@ void
 gl_quit(gl_context_t *gl)
 {
   assert(gl);
-
   xcb_disconnect(gl->connection);
-  gl->connection = NULL;
-  gl->screen = NULL;
 }
 
 void
@@ -84,14 +190,17 @@ gl_create_window(gl_context_t *gl, gl_window_t *window, i32_t width, i32_t heigh
   u32_t value_mask;
   u32_t value_list[2];
 
-  window->width = width;
+  window->width  = width;
   window->height = height;
-  window->byte_size = width * height * 4;
+
+  window->size         = window->width * window->height;
+  window->byte_size    = window->size  * sizeof(i32_t);
+  window->aspect_ratio = (double) window->width / (double) window->height;
 
   window->id = xcb_generate_id(gl->connection);
 
-  value_mask = XCB_CW_BACK_PIXEL  // value_list[0]
-             | XCB_CW_EVENT_MASK; // value_list[1]
+  value_mask    = XCB_CW_BACK_PIXEL         // value_list[0]
+                | XCB_CW_EVENT_MASK;        // value_list[1]
 
   value_list[0] = gl->screen->black_pixel;  // XCB_CW_BACK_PIXEL
 
@@ -113,7 +222,7 @@ gl_create_window(gl_context_t *gl, gl_window_t *window, i32_t width, i32_t heigh
 
   // create frame_buffer / image
 
-  window->frame_buffer = malloc(window->byte_size);
+  window->frame_buffer = malloc(window->byte_size * sizeof(i32_t));
   assert(window->frame_buffer);
 
   window->image = xcb_image_create_native(
@@ -185,18 +294,17 @@ gl_create_window(gl_context_t *gl, gl_window_t *window, i32_t width, i32_t heigh
 
   free(property_reply);
   free(atom_reply);
-
-
-  // map window
-
-  xcb_map_window(gl->connection, window->id);
 }
 
 void
-gl_destroy_window(gl_window_t *window)
+gl_destroy_window(gl_context_t *gl, gl_window_t *window)
 {
+  assert(gl);
+  assert(window);
+  xcb_free_gc(gl->connection, window->gc);     // ?
+  xcb_free_pixmap(gl->connection, gl->pixmap); // ?
+  xcb_image_destroy(window->image);
   free(window->frame_buffer);
-  // @todo window->image
 }
 
 void
@@ -205,13 +313,44 @@ gl_show_window(gl_context_t *gl, gl_window_t *window)
   assert(gl);
   assert(window);
   xcb_map_window(gl->connection, window->id);
-  xcb_flush(gl->connection); // ?
+  xcb_flush(gl->connection);
+}
+
+void
+gl_blit_window(gl_context_t *gl, gl_window_t *window)
+{
+  assert(gl);
+  assert(window);
+
+  xcb_image_put(
+    gl->connection,
+    gl->pixmap,
+    window->gc,
+    window->image,
+    0, 0, 0 // x, y, left_pad
+  );
+
+  xcb_copy_area(
+    gl->connection,
+    gl->pixmap,
+    window->id,
+    window->gc,
+    0, 0, 0, 0,
+    window->width, window->height
+  );
+
+  xcb_flush(gl->connection);
 }
 
 
 void
-gl_set_string_property(gl_context_t *gl, gl_window_t *window, const char *atom_name, const char *atom_value)
-{
+gl_set_string_property(
+  gl_context_t *gl,
+  gl_window_t  *window,
+  const char   *atom_name,
+  const char   *atom_value,
+  usize_t       value_size
+) {
   assert(gl);
   assert(window);
   assert(atom_name);
@@ -220,93 +359,84 @@ gl_set_string_property(gl_context_t *gl, gl_window_t *window, const char *atom_n
   xcb_intern_atom_cookie_t  cookie;
   xcb_intern_atom_reply_t  *reply;
 
-  cookie = xcb_intern_atom(gl->connection, 0, sizeof(atom_name) - 1, atom_name);
+  cookie = xcb_intern_atom(gl->connection, 0, string_length(atom_name), atom_name);
   reply  = xcb_intern_atom_reply(gl->connection, cookie, NULL);
   assert(reply);
 
+  if (value_size == 0) value_size = string_length(atom_value);
+
   xcb_change_property(
-    gl->connection,
-    XCB_PROP_MODE_REPLACE,
-    window->id,
-    reply->atom,
-    XCB_ATOM_STRING,
-    sizeof(char) * 8,
-    sizeof(atom_value) - 1,
-    atom_value
+    gl->connection,        // connection
+    XCB_PROP_MODE_REPLACE, // mode
+    window->id,            // window
+    reply->atom,           // property
+    XCB_ATOM_STRING,       // type
+    sizeof(char) * 8,      // format
+    value_size,            // data_len
+    atom_value             // data
   );
 
   free(reply);
 }
 
-
-int
-main(void)
+void
+gl_start(gl_context_t *gl)
 {
-  gl_context_t gl;
-  gl_window_t  win;
+  assert(gl);
+  gl->loop = true;
+}
 
-  gl_init(&gl);
+void
+gl_stop(gl_context_t *gl)
+{
+  assert(gl);
+  gl->loop = false;
+}
 
-  gl_create_window(&gl, &win, 990, 540);
-  gl_set_string_property(&gl, &win, "WM_CLASS", "xcbexample\0XCBExample\0");
-  gl_set_string_property(&gl, &win, "WM_NAME", "XCB Example");
+bool_t
+gl_is_running(gl_context_t *gl)
+{
+  assert(gl);
+  return gl->loop;
+}
 
-  gl.loop = true;
 
-  for (gl.loop = true; gl.loop; )
-  {
-    while ((gl.event = xcb_poll_for_event(gl.connection)))
-    {
-      switch (gl.event->response_type & ~0x80)
-      {
-        case XCB_KEY_PRESS:
-          xcb_key_press_event_t *key = (xcb_key_press_event_t *) gl.event;
-          if (key->detail == KEY_ESC) gl.loop = false;
-          break;
-      }
+void
+gl_fill_window(gl_window_t *window, color_t color)
+{
+  assert(window);
 
-      free(gl.event);
-    }
+  for (i32_t i = 0; i < window->size; ++i)
+    window->frame_buffer[i] = color;
+}
+
+void
+gl_put_pixel(gl_window_t *window, i32_t x, i32_t y, color_t color)
+{
+  assert(window);
+
+  if (
+       x >= 0 && x < window->width
+    && y >= 0 && y < window->height
+  ) {
+    window->frame_buffer[y * window->width + x] = color;
   }
-
-  gl_destroy_window(&win);
-  gl_quit(&gl);
 }
 
-
-/*
 void
-gl_fill(i32_t *buffer, i32_t size, u32_t color)
+gl_draw_line(gl_window_t *window, i32_t x0, i32_t y0, i32_t x1, i32_t y1, color_t color)
 {
-  for (i32_t i = 0; i < size; ++i)
-    buffer[i] = color;
-}
+  assert(window);
 
-void
-gl_put_pixel(
-  i32_t *buffer, i32_t width, i32_t height,
-  i32_t x, i32_t y, u32_t color
-) {
-  if (x >= 0 && x < width && y >= 0 && y < height)
-    buffer[y * width + x] = color;
-}
-
-void
-gl_draw_line(
-  i32_t *buffer, i32_t width, i32_t height,
-  i32_t x0, i32_t y0, i32_t x1, i32_t y1, u32_t color
-) {
   i32_t dx  =  absolute_number(x1 - x0);
   i32_t dy  = -absolute_number(y1 - y0);
   i32_t sx  =  x0 < x1 ? 1 : -1;
   i32_t sy  =  y0 < y1 ? 1 : -1;
   i32_t err =  dx + dy;
 
-  gl_put_pixel(buffer, width, height, x0, y0, color);
-
   while (true)
   {
-    gl_put_pixel(buffer, width, height, x0, y0, color);
+    gl_put_pixel(window, x0, y0, color);
     if (x0 == x1 && y0 == y1) break;
     i32_t err2 = err * 2;
     if (err2 >= dy) { err += dy; x0 += sx; }
@@ -315,167 +445,16 @@ gl_draw_line(
 }
 
 
-int
-main(void)
+i32_t
+gl_project_x(gl_window_t *window, double x)
 {
-  xcb_connection_t *connection;
-  xcb_screen_t *screen;
-  xcb_window_t window;
-  i32_t *fbuffer;
-  xcb_image_t *image;
-  xcb_pixmap_t pixmap;
-  xcb_gcontext_t gc;
-  xcb_generic_event_t *event;
-
-
-  // create connection
-  connection = xcb_connect(NULL, NULL);
-  screen = xcb_setup_roots_iterator(xcb_get_setup(connection)).data;
-
-
-  // create window
-  window = xcb_generate_id(connection);
-
-  xcb_create_window(
-    connection,                            // connection
-    XCB_COPY_FROM_PARENT,                  // depth (bpi)
-    window,                                // window
-    screen->root,                          // parent
-    0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, 1,  // geometry
-    XCB_WINDOW_CLASS_INPUT_OUTPUT,         // class
-    screen->root_visual,                   // visual
-
-    XCB_CW_BACK_PIXEL                      // value mask
-    | XCB_CW_EVENT_MASK,
-
-    (u32_t[]) {                            // value list
-      screen->black_pixel,
-      XCB_EVENT_MASK_KEY_PRESS,
-    }
-  );
-
-
-  // create frame buffer
-  fbuffer = malloc(WINDOW_SIZE * sizeof(i32_t));
-
-  image = xcb_image_create_native(
-    connection,
-    WINDOW_WIDTH, WINDOW_HEIGHT,
-    XCB_IMAGE_FORMAT_Z_PIXMAP,
-    screen->root_depth,
-    NULL, 0, (u8_t *) fbuffer
-  );
-
-
-  // create pixmap (server buffer)
-  pixmap = xcb_generate_id(connection);
-
-  xcb_create_pixmap(
-    connection,
-    screen->root_depth,
-    pixmap,
-    window,
-    WINDOW_WIDTH, WINDOW_HEIGHT
-  );
-
-  // create gc
-  gc = xcb_generate_id(connection);
-  xcb_create_gc(connection, gc, pixmap, 0, NULL);
-
-
-  // add class name (for Window Manager)
-  xcb_intern_atom_cookie_t  cookie;
-  xcb_intern_atom_reply_t  *reply;
-  const char atom_name[] = "WM_CLASS";
-  const char atom_value[] = "xcbexample\0XCBExample\0";
-
-  cookie = xcb_intern_atom(connection, 0, sizeof(atom_name) -1, atom_name);
-  reply  = xcb_intern_atom_reply(connection, cookie, NULL);
-
-  xcb_change_property(
-    connection,
-    XCB_PROP_MODE_REPLACE,
-    window,
-    reply->atom,
-    XCB_ATOM_STRING,
-    sizeof(char) * 8,
-    sizeof(atom_value) - 1,
-    atom_value
-  );
-
-  free(reply);
-
-
-  // show window
-  xcb_map_window(connection, window);
-  xcb_flush(connection);
-
-
-  // loop
-  for (bool_t loop = true; loop; )
-  {
-    while ((event = xcb_poll_for_event(connection)))
-    {
-      switch (event->response_type & ~0x80)
-      {
-        case XCB_KEY_PRESS:
-          xcb_key_press_event_t *key = (xcb_key_press_event_t *) event;
-          if (key->detail == 9) loop = false;
-          break;
-      }
-      free(event);
-    }
-
-    // draw
-    gl_fill(fbuffer, WINDOW_SIZE, 0x000000);
-
-    gl_draw_line(
-      fbuffer, WINDOW_WIDTH, WINDOW_HEIGHT,                 // buffer data
-      0, 0, WINDOW_WIDTH - 1, WINDOW_HEIGHT - 1, 0x0000FF   // coords and color
-    );
-
-    gl_draw_line(
-      fbuffer, WINDOW_WIDTH, WINDOW_HEIGHT,                 // buffer data
-      0, WINDOW_HEIGHT - 1, WINDOW_WIDTH - 1, 0, 0xFF0000   // coords and color
-    );
-
-    gl_put_pixel(
-      fbuffer, WINDOW_WIDTH, WINDOW_HEIGHT,                 // buffer data
-      WINDOW_WIDTH / 2 - 1, WINDOW_HEIGHT / 2 - 1, 0x00FF00 // coords and color
-    );
-
-
-    // bit blit
-    xcb_image_put(
-      connection,
-      pixmap,
-      gc,
-      image,
-      0, 0, 0 // x, y, left_pad
-    );
-
-    xcb_copy_area(
-      connection,
-      pixmap,
-      window,
-      gc,
-      0, 0,
-      0, 0,
-      WINDOW_WIDTH, WINDOW_HEIGHT
-    );
-
-
-    // update window
-    xcb_flush(connection);
-  }
-
-
-  // close connection and cleanup
-  xcb_free_gc(connection, gc);
-  xcb_free_pixmap(connection, pixmap);
-  xcb_destroy_window(connection, window);
-  xcb_disconnect(connection);
-  if (fbuffer) free(fbuffer);
-  if (image) free(image);
+  assert(window);
+  return (i32_t) (((double) window->width * .5) * (1.0 + x / window->aspect_ratio));
 }
-*/
+
+i32_t
+gl_project_y(gl_window_t *window, double y)
+{
+  assert(window);
+  return (i32_t) (((double) window->height * .5) * (1.0 + y));
+}
