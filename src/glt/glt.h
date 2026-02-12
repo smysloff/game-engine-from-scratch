@@ -1,5 +1,5 @@
 
-// src/tui/tui.c
+// src/glt/glt.c
 
 #pragma once
 
@@ -19,22 +19,22 @@ typedef struct
   u32_t  border_size;
   u32_t  border_char;
   u8_t  *buffer;
-} tui_window_t;
+} glt_window_t;
 
 
-void tui_create_window(tui_window_t *window, u32_t width, u32_t height);
-void tui_destroy_window(tui_window_t *window);
-void tui_fill_window(tui_window_t *window, char c);
-void tui_draw_window(tui_window_t *window, u32_t x_size, u32_t y_size);
-void tui_set_border(tui_window_t *window, char c, u32_t size);
-void tui_put_pixel(tui_window_t *window, char c, i32_t x, i32_t y);
-void tui_draw_line(tui_window_t *window, char c, i32_t x0, i32_t y0, i32_t x1, i32_t y1);
+void glt_create_window(glt_window_t *window, u32_t width, u32_t height);
+void glt_destroy_window(glt_window_t *window);
+void glt_fill_window(glt_window_t *window, char c);
+void glt_draw_window(glt_window_t *window, u32_t x_size, u32_t y_size);
+void glt_set_border(glt_window_t *window, char c, u32_t size);
+void glt_put_pixel(glt_window_t *window, char c, i32_t x, i32_t y);
+void glt_draw_line(glt_window_t *window, char c, i32_t x0, i32_t y0, i32_t x1, i32_t y1);
 
 
-#ifdef TUI_IMPLEMENTATION
+#ifdef GLT_IMPLEMENTATION
 
 static void
-tui_draw_horizontal_border(tui_window_t *window, u32_t x_size, u32_t y_size)
+glt_draw_horizontal_border(glt_window_t *window, u32_t x_size, u32_t y_size)
 {
   u32_t border_width = window->width + window->border_size * 2;
 
@@ -55,7 +55,7 @@ tui_draw_horizontal_border(tui_window_t *window, u32_t x_size, u32_t y_size)
 }
 
 static void
-tui_draw_vertical_border(tui_window_t *window, u32_t x_size)
+glt_draw_vertical_border(glt_window_t *window, u32_t x_size)
 {
   for (u32_t c = 0; c < window->border_size; ++c)   // how many columns?
   {
@@ -68,7 +68,7 @@ tui_draw_vertical_border(tui_window_t *window, u32_t x_size)
 
 
 void
-tui_create_window(tui_window_t *window, u32_t width, u32_t height)
+glt_create_window(glt_window_t *window, u32_t width, u32_t height)
 {
   assert(window);
   window->border_size = 0;
@@ -81,7 +81,7 @@ tui_create_window(tui_window_t *window, u32_t width, u32_t height)
 }
 
 void
-tui_destroy_window(tui_window_t *window)
+glt_destroy_window(glt_window_t *window)
 {
   assert(window);
   assert(window->buffer);
@@ -93,7 +93,7 @@ tui_destroy_window(tui_window_t *window)
 }
 
 void
-tui_fill_window(tui_window_t *window, char c)
+glt_fill_window(glt_window_t *window, char c)
 {
   assert(window);
   for (u32_t i = 0; i < window->byte_size; ++i)
@@ -101,20 +101,20 @@ tui_fill_window(tui_window_t *window, char c)
 }
 
 void
-tui_draw_window(tui_window_t *window, u32_t x_size, u32_t y_size)
+glt_draw_window(glt_window_t *window, u32_t x_size, u32_t y_size)
 {
   assert(window);
 
   if (x_size == 0) x_size = 1;
   if (y_size == 0) y_size = 1;
 
-  tui_draw_horizontal_border(window, x_size, y_size);
+  glt_draw_horizontal_border(window, x_size, y_size);
 
   for (u32_t y = 0; y < window->height; ++y)
   {
     for (u32_t y_i = 0; y_i < y_size; ++y_i)
     {
-      tui_draw_vertical_border(window, x_size);
+      glt_draw_vertical_border(window, x_size);
 
       for (u32_t x = 0; x < window->width; ++x)
       {
@@ -125,16 +125,16 @@ tui_draw_window(tui_window_t *window, u32_t x_size, u32_t y_size)
         }
       }
 
-      tui_draw_vertical_border(window, x_size);
+      glt_draw_vertical_border(window, x_size);
       print_endl();
     }
   }
 
-  tui_draw_horizontal_border(window, x_size, y_size);
+  glt_draw_horizontal_border(window, x_size, y_size);
 }
 
 void
-tui_set_border(tui_window_t *window, char c, u32_t size)
+glt_set_border(glt_window_t *window, char c, u32_t size)
 {
   assert(window);
   assert(!size || (size && is_print(c)));
@@ -143,7 +143,7 @@ tui_set_border(tui_window_t *window, char c, u32_t size)
 }
 
 void
-tui_put_pixel(tui_window_t *window, char c, i32_t x, i32_t y)
+glt_put_pixel(glt_window_t *window, char c, i32_t x, i32_t y)
 {
   assert(window);
   assert(is_print(c));
@@ -156,7 +156,7 @@ tui_put_pixel(tui_window_t *window, char c, i32_t x, i32_t y)
 }
 
 void
-tui_draw_line(tui_window_t *window, char c, i32_t x0, i32_t y0, i32_t x1, i32_t y1)
+glt_draw_line(glt_window_t *window, char c, i32_t x0, i32_t y0, i32_t x1, i32_t y1)
 {
   assert(window);
   assert(is_print(c));
@@ -167,11 +167,11 @@ tui_draw_line(tui_window_t *window, char c, i32_t x0, i32_t y0, i32_t x1, i32_t 
   i32_t sy  =  y0 < y1 ? 1 : -1;
   i32_t err =  dx + dy;
 
-  tui_put_pixel(window, c, x0, y0);
+  glt_put_pixel(window, c, x0, y0);
 
   while (1)
   {
-    tui_put_pixel(window, c, x0, y0);
+    glt_put_pixel(window, c, x0, y0);
     if (x0 == x1 && y0 == y1) break;
     i32_t err2 = err * 2;
     if (err2 >= dy) { err += dy; x0 += sx; }

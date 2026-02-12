@@ -1,7 +1,7 @@
 examples/core/io
 examples/core/print_format
 examples/core/vector
-examples/tui/heart
+examples/glt/heart
 examples/xcb/open_window
 examples/xcb/wait_events
 examples/xcb/poll_events

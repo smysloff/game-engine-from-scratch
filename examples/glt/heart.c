@@ -1,9 +1,9 @@
 
-// file: examples/tui/heart.c
+// file: examples/glt/heart.c
 
 
-#define TUI_IMPLEMENTATION
-#include "tui/tui.h"
+#define GLT_IMPLEMENTATION
+#include "glt/glt.h"
 
 
 bool_t
@@ -21,11 +21,11 @@ main(void)
   const i32_t w = 39;
   const i32_t h = 19;
 
-  tui_window_t win;
+  glt_window_t win;
 
-  tui_create_window(&win, w, h);
-  tui_set_border(&win, '~', 2);
-  tui_fill_window(&win, ' ');
+  glt_create_window(&win, w, h);
+  glt_set_border(&win, '~', 2);
+  glt_fill_window(&win, ' ');
 
 
   i32_t h1_3 = h/3;
@@ -48,7 +48,7 @@ main(void)
       // top
       if (y <= h1_3)
         if (in_upper)
-          tui_put_pixel(&win, '@', x, y);
+          glt_put_pixel(&win, '@', x, y);
 
       // middle
       if (y >= h1_3 && y <= h2_3)
@@ -57,7 +57,7 @@ main(void)
              (x > left_cx  - radius + (y - h1_3))
           && (x < right_cx + radius - (y - h1_3))
         ) {
-          tui_put_pixel(&win, '%', x, y);
+          glt_put_pixel(&win, '%', x, y);
         }
       }
 
@@ -68,7 +68,7 @@ main(void)
              (x >= left_cx  - radius + (y - (h1_3)) + 1)
           && (x <= right_cx + radius - (y - (h1_3)) - 1)
         ) {
-          tui_put_pixel(&win, '%', x, y);
+          glt_put_pixel(&win, '%', x, y);
         }
       }
 
@@ -76,8 +76,8 @@ main(void)
   }
 
 
-  tui_draw_window(&win, 2, 1);
-  tui_destroy_window(&win);
+  glt_draw_window(&win, 2, 1);
+  glt_destroy_window(&win);
 
   return 0;
 }
