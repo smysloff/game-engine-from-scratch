@@ -1,5 +1,5 @@
 
-// file: src/gl/gl.h
+// file: src/gls/gls.h
 
 #pragma once
 
@@ -10,10 +10,9 @@
 
 // Key codes
 
-// @todo linux wayland
-// @todo android
-// @todo ios
-// @todo error handling
+// @todo add wayland support
+// @todo add android support
+// @todo add ios     support
 
 #if defined(__linux__) || defined(__unix__) || defined(__gnu_linux__)
 
@@ -27,86 +26,93 @@
 
   #define KEY_ESC 27 // Windows VK_ESCAPE or ASCII (0x1B)
 
+#else
+
+  #error "Unsuported platform"
+
 #endif
 
 
 // Data structures
 
-typedef struct
-{
-  xcb_connection_t     *connection;
-  xcb_screen_t         *screen;
-  xcb_generic_event_t  *event;
-  xcb_pixmap_t          pixmap;
-  bool_t                loop;
-  //u64_t                 frame;
-} gl_context_t;
-
-typedef struct
-{
-  xcb_window_t    id;
-  xcb_gcontext_t  gc;
-  i32_t           width, height;
-  i32_t           size;
-  i32_t           byte_size;
-  double          aspect_ratio;
-  i32_t          *frame_buffer;
-  xcb_image_t    *image;
-  xcb_atom_t      wm_delete_atom;
-} gl_window_t;
-
-typedef u32_t color_t;
+typedef struct gls_context_s gls_context_t;
+typedef struct gls_window_s  gls_window_t;
+typedef u32_t  argb_color_t;
 
 
 // API methods
 
-void   gl_init(gl_context_t *gl);
-void   gl_quit(gl_context_t *gl);
+void   gls_init(gls_context_t *ctx);
+void   gls_quit(gls_context_t *ctx);
 
-void   gl_create_window(gl_context_t *gl, gl_window_t *window, i32_t width, i32_t height);
-void   gl_destroy_window(gl_context_t *gl, gl_window_t *window);
-void   gl_show_window(gl_context_t *gl, gl_window_t *window);
-void   gl_blit_window(gl_context_t *gl, gl_window_t *window);
+void   gls_create_window(gls_context_t *ctx, gls_window_t *window, i32_t width, i32_t height);
+void   gls_destroy_window(gls_context_t *ctx, gls_window_t *window);
+void   gls_show_window(gls_context_t *ctx, gls_window_t *window);
+void   gls_blit_window(gls_context_t *ctx, gls_window_t *window);
 
-void   gl_set_string_property(gl_context_t *gl, gl_window_t *window, const char *atom_name, const char *atom_value, usize_t value_size);
+void   gls_set_string_property(gls_context_t *ctx, gls_window_t *window, const char *atom_name, const char *atom_value, usize_t value_size);
 
-void   gl_start(gl_context_t *gl);
-void   gl_stop(gl_context_t *gl);
-bool_t gl_is_running(gl_context_t *gl);
+void   gls_start(gls_context_t *ctx);
+void   gls_stop(gls_context_t *ctx);
+bool_t gls_is_running(gls_context_t *ctx);
 
-void   gl_fill_window(gl_window_t *window, color_t color);
-void   gl_put_pixel(gl_window_t *window, i32_t x, i32_t y, color_t color);
-void   gl_draw_line(gl_window_t *window, i32_t x0, i32_t y0, i32_t x1, i32_t y1, color_t color);
+void   gls_fill_window(gls_window_t *window, argb_color_t color);
+void   gls_put_pixel(gls_window_t *window, i32_t x, i32_t y, argb_color_t color);
+void   gls_draw_line(gls_window_t *window, i32_t x0, i32_t y0, i32_t x1, i32_t y1, argb_color_t color);
 
-i32_t  gl_project_x(gl_window_t *window, double x);
-i32_t  gl_project_y(gl_window_t *window, double y);
+i32_t  gls_project_x(gls_window_t *window, double x);
+i32_t  gls_project_y(gls_window_t *window, double y);
 
 
-#ifdef GL_IMPLEMENTATION
+#ifdef GLS_IMPLEMENTATION
+
+
+typedef struct gls_context_s
+{
+  xcb_connection_t     *connection;
+  xcb_screen_t         *screen;
+  xcb_generic_event_t  *event;
+  bool_t                loop;
+} gls_context_t;
+
+typedef struct gls_window_s
+{
+  xcb_window_t    id;
+  xcb_gcontext_t  gc;
+  i32_t           width, height; // ? u32_t
+  i32_t           size;          // ? u32_t
+  i32_t           byte_size;     // ? u32_t
+  double          aspect_ratio;
+  i32_t          *frame_buffer;  // ? u32_t
+  xcb_image_t    *image;
+  xcb_pixmap_t    pixmap;
+  xcb_atom_t      wm_delete_atom;
+} gls_window_t;
+
 
 void
-gl_init(gl_context_t *gl)
+gls_init(gls_context_t *ctx)
 {
-  assert(gl);
+  assert(ctx);
 
-  gl->connection = xcb_connect(NULL, NULL);
-  assert(gl->connection);
+  ctx->connection = xcb_connect(NULL, NULL);
+  assert(ctx->connection);
 
-  gl->screen = xcb_setup_roots_iterator(xcb_get_setup(gl->connection)).data;
-  assert(gl->screen);
+  ctx->screen = xcb_setup_roots_iterator(xcb_get_setup(ctx->connection)).data;
+  assert(ctx->screen);
 }
 
 void
-gl_quit(gl_context_t *gl)
+gls_quit(gls_context_t *ctx)
 {
-  assert(gl);
-  xcb_disconnect(gl->connection);
+  assert(ctx);
+  xcb_disconnect(ctx->connection);
 }
 
 void
-gl_create_window(gl_context_t *gl, gl_window_t *window, i32_t width, i32_t height)
+gls_create_window(gls_context_t *ctx, gls_window_t *window, i32_t width, i32_t height)
 {
-  assert(gl);
+  assert(ctx);
   assert(window);
 
 
@@ -122,25 +128,25 @@ gl_create_window(gl_context_t *gl, gl_window_t *window, i32_t width, i32_t heigh
   window->byte_size    = window->size  * sizeof(i32_t);
   window->aspect_ratio = (double) window->width / (double) window->height;
 
-  window->id = xcb_generate_id(gl->connection);
+  window->id    = xcb_generate_id(ctx->connection);
 
   value_mask    = XCB_CW_BACK_PIXEL         // value_list[0]
                 | XCB_CW_EVENT_MASK;        // value_list[1]
 
-  value_list[0] = gl->screen->black_pixel;  // XCB_CW_BACK_PIXEL
+  value_list[0] = ctx->screen->black_pixel;  // XCB_CW_BACK_PIXEL
 
   value_list[1] = XCB_EVENT_MASK_EXPOSURE   // XCB_CW_EVENT_MASK
                 | XCB_EVENT_MASK_KEY_PRESS
                 | XCB_EVENT_MASK_STRUCTURE_NOTIFY; // -> WM_DELETE_WINDOW
 
   xcb_create_window(
-    gl->connection,
+    ctx->connection,
     XCB_COPY_FROM_PARENT,
     window->id,
-    gl->screen->root,
+    ctx->screen->root,
     0, 0, window->width, window->height, 1,
     XCB_WINDOW_CLASS_INPUT_OUTPUT,
-    gl->screen->root_visual,
+    ctx->screen->root_visual,
     value_mask, value_list
   );
 
@@ -151,10 +157,10 @@ gl_create_window(gl_context_t *gl, gl_window_t *window, i32_t width, i32_t heigh
   assert(window->frame_buffer);
 
   window->image = xcb_image_create_native(
-    gl->connection,
+    ctx->connection,
     window->width, window->height,
     XCB_IMAGE_FORMAT_Z_PIXMAP,
-    gl->screen->root_depth,
+    ctx->screen->root_depth,
     NULL, 0, (u8_t *) window->frame_buffer
   );
   assert(window->image);
@@ -162,12 +168,12 @@ gl_create_window(gl_context_t *gl, gl_window_t *window, i32_t width, i32_t heigh
 
   // create pixmap
 
-  gl->pixmap = xcb_generate_id(gl->connection);
+  window->pixmap = xcb_generate_id(ctx->connection);
 
   xcb_create_pixmap(
-    gl->connection,
-    gl->screen->root_depth,
-    gl->pixmap,
+    ctx->connection,
+    ctx->screen->root_depth,
+    window->pixmap,
     window->id,
     window->width, window->height
   );
@@ -175,8 +181,8 @@ gl_create_window(gl_context_t *gl, gl_window_t *window, i32_t width, i32_t heigh
 
   // create gc
 
-  window->gc = xcb_generate_id(gl->connection);
-  xcb_create_gc(gl->connection, window->gc, window->id, 0, NULL);
+  window->gc = xcb_generate_id(ctx->connection);
+  xcb_create_gc(ctx->connection, window->gc, window->id, 0, NULL);
 
 
   // set WM_DELETE_WINDOW
@@ -192,20 +198,20 @@ gl_create_window(gl_context_t *gl, gl_window_t *window, i32_t width, i32_t heigh
   xcb_atom_t properties[1];
 
   property_cookie = xcb_intern_atom(
-    gl->connection, 0, sizeof(property_name) - 1, property_name);
+    ctx->connection, 0, sizeof(property_name) - 1, property_name);
 
   atom_cookie = xcb_intern_atom(
-    gl->connection, 0, sizeof(atom_name) - 1, atom_name);
+    ctx->connection, 0, sizeof(atom_name) - 1, atom_name);
 
-  property_reply = xcb_intern_atom_reply(gl->connection, property_cookie, NULL);
-  atom_reply = xcb_intern_atom_reply(gl->connection, atom_cookie, NULL);
+  property_reply = xcb_intern_atom_reply(ctx->connection, property_cookie, NULL);
+  atom_reply = xcb_intern_atom_reply(ctx->connection, atom_cookie, NULL);
   assert(property_reply);
   assert(atom_reply);
 
   properties[0] = atom_reply->atom;
 
   xcb_change_property(
-    gl->connection,
+    ctx->connection,
     XCB_PROP_MODE_REPLACE,
     window->id,
     property_reply->atom,
@@ -222,61 +228,61 @@ gl_create_window(gl_context_t *gl, gl_window_t *window, i32_t width, i32_t heigh
 }
 
 void
-gl_destroy_window(gl_context_t *gl, gl_window_t *window)
+gls_destroy_window(gls_context_t *ctx, gls_window_t *window)
 {
-  assert(gl);
+  assert(ctx);
   assert(window);
-  xcb_free_gc(gl->connection, window->gc);     // ?
-  xcb_free_pixmap(gl->connection, gl->pixmap); // ?
+  xcb_free_gc(ctx->connection, window->gc);
+  xcb_free_pixmap(ctx->connection, window->pixmap);
   xcb_image_destroy(window->image);
   free(window->frame_buffer);
 }
 
 void
-gl_show_window(gl_context_t *gl, gl_window_t *window)
+gls_show_window(gls_context_t *ctx, gls_window_t *window)
 {
-  assert(gl);
+  assert(ctx);
   assert(window);
-  xcb_map_window(gl->connection, window->id);
-  xcb_flush(gl->connection);
+  xcb_map_window(ctx->connection, window->id);
+  xcb_flush(ctx->connection);
 }
 
 void
-gl_blit_window(gl_context_t *gl, gl_window_t *window)
+gls_blit_window(gls_context_t *ctx, gls_window_t *window)
 {
-  assert(gl);
+  assert(ctx);
   assert(window);
 
   xcb_image_put(
-    gl->connection,
-    gl->pixmap,
+    ctx->connection,
+    window->pixmap,
     window->gc,
     window->image,
     0, 0, 0 // x, y, left_pad
   );
 
   xcb_copy_area(
-    gl->connection,
-    gl->pixmap,
+    ctx->connection,
+    window->pixmap,
     window->id,
     window->gc,
     0, 0, 0, 0,
     window->width, window->height
   );
 
-  xcb_flush(gl->connection);
+  xcb_flush(ctx->connection);
 }
 
 
 void
-gl_set_string_property(
-  gl_context_t *gl,
-  gl_window_t  *window,
-  const char   *atom_name,
-  const char   *atom_value,
-  usize_t       value_size
+gls_set_string_property(
+  gls_context_t *ctx,
+  gls_window_t  *window,
+  const char    *atom_name,
+  const char    *atom_value,
+  usize_t        value_size
 ) {
-  assert(gl);
+  assert(ctx);
   assert(window);
   assert(atom_name);
   assert(atom_value);
@@ -284,14 +290,14 @@ gl_set_string_property(
   xcb_intern_atom_cookie_t  cookie;
   xcb_intern_atom_reply_t  *reply;
 
-  cookie = xcb_intern_atom(gl->connection, 0, string_length(atom_name), atom_name);
-  reply  = xcb_intern_atom_reply(gl->connection, cookie, NULL);
+  cookie = xcb_intern_atom(ctx->connection, 0, string_length(atom_name), atom_name);
+  reply  = xcb_intern_atom_reply(ctx->connection, cookie, NULL);
   assert(reply);
 
   if (value_size == 0) value_size = string_length(atom_value);
 
   xcb_change_property(
-    gl->connection,        // connection
+    ctx->connection,       // connection
     XCB_PROP_MODE_REPLACE, // mode
     window->id,            // window
     reply->atom,           // property
@@ -305,29 +311,29 @@ gl_set_string_property(
 }
 
 void
-gl_start(gl_context_t *gl)
+gls_start(gls_context_t *ctx)
 {
-  assert(gl);
-  gl->loop = true;
+  assert(ctx);
+  ctx->loop = true;
 }
 
 void
-gl_stop(gl_context_t *gl)
+gls_stop(gls_context_t *ctx)
 {
-  assert(gl);
-  gl->loop = false;
+  assert(ctx);
+  ctx->loop = false;
 }
 
 bool_t
-gl_is_running(gl_context_t *gl)
+gls_is_running(gls_context_t *ctx)
 {
-  assert(gl);
-  return gl->loop;
+  assert(ctx);
+  return ctx->loop;
 }
 
 
 void
-gl_fill_window(gl_window_t *window, color_t color)
+gls_fill_window(gls_window_t *window, argb_color_t color)
 {
   assert(window);
 
@@ -336,7 +342,7 @@ gl_fill_window(gl_window_t *window, color_t color)
 }
 
 void
-gl_put_pixel(gl_window_t *window, i32_t x, i32_t y, color_t color)
+gls_put_pixel(gls_window_t *window, i32_t x, i32_t y, argb_color_t color)
 {
   assert(window);
 
@@ -349,7 +355,7 @@ gl_put_pixel(gl_window_t *window, i32_t x, i32_t y, color_t color)
 }
 
 void
-gl_draw_line(gl_window_t *window, i32_t x0, i32_t y0, i32_t x1, i32_t y1, color_t color)
+gls_draw_line(gls_window_t *window, i32_t x0, i32_t y0, i32_t x1, i32_t y1, argb_color_t color)
 {
   assert(window);
 
@@ -361,7 +367,7 @@ gl_draw_line(gl_window_t *window, i32_t x0, i32_t y0, i32_t x1, i32_t y1, color_
 
   while (true)
   {
-    gl_put_pixel(window, x0, y0, color);
+    gls_put_pixel(window, x0, y0, color);
     if (x0 == x1 && y0 == y1) break;
     i32_t err2 = err * 2;
     if (err2 >= dy) { err += dy; x0 += sx; }
@@ -371,14 +377,14 @@ gl_draw_line(gl_window_t *window, i32_t x0, i32_t y0, i32_t x1, i32_t y1, color_
 
 
 i32_t
-gl_project_x(gl_window_t *window, double x)
+gls_project_x(gls_window_t *window, double x)
 {
   assert(window);
   return (i32_t) (((double) window->width * .5) * (1.0 + x / window->aspect_ratio));
 }
 
 i32_t
-gl_project_y(gl_window_t *window, double y)
+gls_project_y(gls_window_t *window, double y)
 {
   assert(window);
   return (i32_t) (((double) window->height * .5) * (1.0 + y));

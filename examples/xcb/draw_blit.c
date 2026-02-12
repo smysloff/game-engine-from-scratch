@@ -15,65 +15,44 @@
 #elif defined(_WIN32) || defined(_WIN64)
   #define KEY_ESC 27 // Windows VK_ESCAPE or ASCII (0x1B)
 #else
-  perror("usuported platform");
-  exit(-1);
+  #error "Unsuported platform";
 #endif
 
 
 // Graphic Library
 
-typedef struct
-{
-  xcb_connection_t     *connection;
-  xcb_screen_t         *screen;
-  xcb_generic_event_t  *event;
-  xcb_pixmap_t          pixmap;
-  bool_t                loop;
-  //u64_t                 frame;
-} gl_context_t;
-
-typedef struct
-{
-  xcb_window_t    id;
-  xcb_gcontext_t  gc;
-  i32_t           width, height;
-  i32_t           size;
-  i32_t           byte_size;
-  double          aspect_ratio;
-  i32_t          *frame_buffer;
-  xcb_image_t    *image;
-  xcb_atom_t      wm_delete_atom;
-} gl_window_t;
-
-typedef u32_t color_t;
+typedef struct gls_context_s gls_context_t;
+typedef struct gls_window_s  gls_window_t;
+typedef u32_t  argb_color_t;
 
 
-void   gl_init(gl_context_t *gl);
-void   gl_quit(gl_context_t *gl);
+void   gls_init(gls_context_t *ctx);
+void   gls_quit(gls_context_t *ctx);
 
-void   gl_create_window(gl_context_t *gl, gl_window_t *window, i32_t width, i32_t height);
-void   gl_destroy_window(gl_context_t *gl, gl_window_t *window);
-void   gl_show_window(gl_context_t *gl, gl_window_t *window);
-void   gl_blit_window(gl_context_t *gl, gl_window_t *window);
+void   gls_create_window(gls_context_t *ctx, gls_window_t *window, i32_t width, i32_t height);
+void   gls_destroy_window(gls_context_t *ctx, gls_window_t *window);
+void   gls_show_window(gls_context_t *ctx, gls_window_t *window);
+void   gls_blit_window(gls_context_t *ctx, gls_window_t *window);
 
-void   gl_set_string_property(gl_context_t *gl, gl_window_t *window, const char *atom_name, const char *atom_value, usize_t value_size);
+void   gls_set_string_property(gls_context_t *ctx, gls_window_t *window, const char *atom_name, const char *atom_value, usize_t value_size);
 
-void   gl_start(gl_context_t *gl);
-void   gl_stop(gl_context_t *gl);
-bool_t gl_is_running(gl_context_t *gl);
+void   gls_start(gls_context_t *ctx);
+void   gls_stop(gls_context_t *ctx);
+bool_t gls_is_running(gls_context_t *ctx);
 
-void   gl_fill_window(gl_window_t *window, color_t color);
-void   gl_put_pixel(gl_window_t *window, i32_t x, i32_t y, color_t color);
-void   gl_draw_line(gl_window_t *window, i32_t x0, i32_t y0, i32_t x1, i32_t y1, color_t color);
+void   gls_fill_window(gls_window_t *window, argb_color_t color);
+void   gls_put_pixel(gls_window_t *window, i32_t x, i32_t y, argb_color_t color);
+void   gls_draw_line(gls_window_t *window, i32_t x0, i32_t y0, i32_t x1, i32_t y1, argb_color_t color);
 
-i32_t  gl_project_x(gl_window_t *window, double x);
-i32_t  gl_project_y(gl_window_t *window, double y);
+i32_t  gls_project_x(gls_window_t *window, double x);
+i32_t  gls_project_y(gls_window_t *window, double y);
+
 
 int
 main(void)
 {
-  gl_context_t gl;
-  gl_window_t  win;
+  gls_context_t ctx;
+  gls_window_t  win;
 
   const i32_t window_width  = 990;
   const i32_t window_height = 540;
@@ -111,28 +90,28 @@ main(void)
   };
 
 
-  gl_init(&gl);
+  gls_init(&ctx);
 
-  gl_create_window(&gl, &win, window_width, window_height);
-  gl_set_string_property(&gl, &win, "WM_CLASS", wm_class, sizeof(wm_class) - 1);
-  gl_set_string_property(&gl, &win, "WM_NAME", wm_name, 0);
+  gls_create_window(&ctx, &win, window_width, window_height);
+  gls_set_string_property(&ctx, &win, "WM_CLASS", wm_class, sizeof(wm_class) - 1);
+  gls_set_string_property(&ctx, &win, "WM_NAME", wm_name, 0);
 
-  gl_show_window(&gl, &win);
-  gl_start(&gl);
+  gls_show_window(&ctx, &win);
+  gls_start(&ctx);
 
-  while (gl_is_running(&gl))
+  while (gls_is_running(&ctx))
   {
-    while ((gl.event = xcb_poll_for_event(gl.connection)))
+    while ((ctx.event = xcb_poll_for_event(ctx.connection)))
     {
-      switch (gl.event->response_type & ~0x80)
+      switch (ctx.event->response_type & ~0x80)
       {
         case XCB_KEY_PRESS:
-          xcb_key_press_event_t *key = (xcb_key_press_event_t *) gl.event;
-          if (key->detail == KEY_ESC) gl_stop(&gl);
+          xcb_key_press_event_t *key = (xcb_key_press_event_t *) ctx.event;
+          if (key->detail == KEY_ESC) gl_stop(&ctx);
           break;
       }
 
-      free(gl.event);
+      free(ctx.event);
     }
 
     gl_fill_window(&win, 0x000000);
@@ -142,46 +121,70 @@ main(void)
     {
       i32_t idx0 = edges[i][0];
       i32_t idx1 = edges[i][1];
-      i32_t x0 = gl_project_x(&win, vertices[idx0][0]);
-      i32_t y0 = gl_project_y(&win, vertices[idx0][1]);
-      i32_t x1 = gl_project_x(&win, vertices[idx1][0]);
-      i32_t y1 = gl_project_y(&win, vertices[idx1][1]);
-      gl_draw_line(&win, x0, y0, x1, y1, 0xFF00FF);
+      i32_t x0 = gls_project_x(&win, vertices[idx0][0]);
+      i32_t y0 = gls_project_y(&win, vertices[idx0][1]);
+      i32_t x1 = gls_project_x(&win, vertices[idx1][0]);
+      i32_t y1 = gls_project_y(&win, vertices[idx1][1]);
+      gls_draw_line(&win, x0, y0, x1, y1, 0xFF00FF);
     }
 
 
-    gl_blit_window(&gl, &win);
-
+    gls_blit_window(&ctx, &win);
   }
 
-  gl_destroy_window(&gl, &win);
-  gl_quit(&gl);
+  gls_destroy_window(&ctx, &win);
+  gls_quit(&ctx);
+
+  return 0;
 }
 
 
-void
-gl_init(gl_context_t *gl)
+typedef struct gls_context_s
 {
-  assert(gl);
+  xcb_connection_t     *connection;
+  xcb_screen_t         *screen;
+  xcb_generic_event_t  *event;
+  bool_t                loop;
+} gls_context_t;
 
-  gl->connection = xcb_connect(NULL, NULL);
-  assert(gl->connection);
+typedef struct gls_window_s
+{
+  xcb_window_t    id;
+  xcb_gcontext_t  gc;
+  i32_t           width, height;
+  i32_t           size;
+  i32_t           byte_size;
+  double          aspect_ratio;
+  i32_t          *frame_buffer;
+  xcb_image_t    *image;
+  xcb_pixmap_t    pixmap;
+  xcb_atom_t      wm_delete_atom;
+} gls_window_t;
 
-  gl->screen = xcb_setup_roots_iterator(xcb_get_setup(gl->connection)).data;
-  assert(gl->screen);
+
+void
+gls_init(gls_context_t *ctx)
+{
+  assert(ctx);
+
+  ctx->connection = xcb_connect(NULL, NULL);
+  assert(ctx->connection);
+
+  ctx->screen = xcb_setup_roots_iterator(xcb_get_setup(ctx->connection)).data;
+  assert(ctx->screen);
 }
 
 void
-gl_quit(gl_context_t *gl)
+gls_quit(gls_context_t *ctx)
 {
-  assert(gl);
-  xcb_disconnect(gl->connection);
+  assert(ctx);
+  xcb_disconnect(ctx->connection);
 }
 
 void
-gl_create_window(gl_context_t *gl, gl_window_t *window, i32_t width, i32_t height)
+gls_create_window(gls_context_t *ctx, gls_window_t *window, i32_t width, i32_t height)
 {
-  assert(gl);
+  assert(ctx);
   assert(window);
 
 
@@ -197,25 +200,25 @@ gl_create_window(gl_context_t *gl, gl_window_t *window, i32_t width, i32_t heigh
   window->byte_size    = window->size  * sizeof(i32_t);
   window->aspect_ratio = (double) window->width / (double) window->height;
 
-  window->id = xcb_generate_id(gl->connection);
+  window->id    = xcb_generate_id(ctx->connection);
 
   value_mask    = XCB_CW_BACK_PIXEL         // value_list[0]
                 | XCB_CW_EVENT_MASK;        // value_list[1]
 
-  value_list[0] = gl->screen->black_pixel;  // XCB_CW_BACK_PIXEL
+  value_list[0] = ctx->screen->black_pixel; // XCB_CW_BACK_PIXEL
 
   value_list[1] = XCB_EVENT_MASK_EXPOSURE   // XCB_CW_EVENT_MASK
                 | XCB_EVENT_MASK_KEY_PRESS
                 | XCB_EVENT_MASK_STRUCTURE_NOTIFY; // -> WM_DELETE_WINDOW
 
   xcb_create_window(
-    gl->connection,
+    ctx->connection,
     XCB_COPY_FROM_PARENT,
     window->id,
-    gl->screen->root,
+    ctx->screen->root,
     0, 0, window->width, window->height, 1,
     XCB_WINDOW_CLASS_INPUT_OUTPUT,
-    gl->screen->root_visual,
+    ctx->screen->root_visual,
     value_mask, value_list
   );
 
@@ -226,10 +229,10 @@ gl_create_window(gl_context_t *gl, gl_window_t *window, i32_t width, i32_t heigh
   assert(window->frame_buffer);
 
   window->image = xcb_image_create_native(
-    gl->connection,
+    ctx->connection,
     window->width, window->height,
     XCB_IMAGE_FORMAT_Z_PIXMAP,
-    gl->screen->root_depth,
+    ctx->screen->root_depth,
     NULL, 0, (u8_t *) window->frame_buffer
   );
   assert(window->image);
@@ -237,12 +240,12 @@ gl_create_window(gl_context_t *gl, gl_window_t *window, i32_t width, i32_t heigh
 
   // create pixmap
 
-  gl->pixmap = xcb_generate_id(gl->connection);
+  ctx->pixmap = xcb_generate_id(ctx->connection);
 
   xcb_create_pixmap(
-    gl->connection,
-    gl->screen->root_depth,
-    gl->pixmap,
+    ctx->connection,
+    ctx->screen->root_depth,
+    ctx->pixmap,
     window->id,
     window->width, window->height
   );

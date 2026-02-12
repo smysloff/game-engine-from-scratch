@@ -1,15 +1,15 @@
 
 // file: examples/xcb/cube3d.c
 
-#define GL_IMPLEMENTATION
-#include "gl/gl.h"
+#define GLS_IMPLEMENTATION
+#include "gls/gls.h"
 
 
 int
 main(void)
 {
-  gl_context_t gl;
-  gl_window_t  win;
+  gls_context_t ctx;
+  gls_window_t  win;
 
   const i32_t window_width  = 990;
   const i32_t window_height = 540;
@@ -47,51 +47,50 @@ main(void)
   };
 
 
-  gl_init(&gl);
+  gls_init(&ctx);
 
-  gl_create_window(&gl, &win, window_width, window_height);
-  gl_set_string_property(&gl, &win, "WM_CLASS", wm_class, sizeof(wm_class) - 1);
-  gl_set_string_property(&gl, &win, "WM_NAME", wm_name, 0);
+  gls_create_window(&ctx, &win, window_width, window_height);
+  gls_set_string_property(&ctx, &win, "WM_CLASS", wm_class, sizeof(wm_class) - 1);
+  gls_set_string_property(&ctx, &win, "WM_NAME",  wm_name, 0);
 
-  gl_show_window(&gl, &win);
-  gl_start(&gl);
+  gls_show_window(&ctx, &win);
+  gls_start(&ctx);
 
-  while (gl_is_running(&gl))
+  while (gls_is_running(&ctx))
   {
-    while ((gl.event = xcb_poll_for_event(gl.connection)))
+    while ((ctx.event = xcb_poll_for_event(ctx.connection)))
     {
-      switch (gl.event->response_type & ~0x80)
+      switch (ctx.event->response_type & ~0x80)
       {
         case XCB_KEY_PRESS:
-          xcb_key_press_event_t *key = (xcb_key_press_event_t *) gl.event;
-          if (key->detail == KEY_ESC) gl_stop(&gl);
+          xcb_key_press_event_t *key = (xcb_key_press_event_t *) ctx.event;
+          if (key->detail == KEY_ESC) gls_stop(&ctx);
           break;
       }
 
-      free(gl.event);
+      free(ctx.event);
     }
 
-    gl_fill_window(&win, 0x000000);
+    gls_fill_window(&win, 0x000000);
 
 
     for (usize_t i = 0; i < array_length(edges); ++i)
     {
       i32_t idx0 = edges[i][0];
       i32_t idx1 = edges[i][1];
-      i32_t x0 = gl_project_x(&win, vertices[idx0][0]);
-      i32_t y0 = gl_project_y(&win, vertices[idx0][1]);
-      i32_t x1 = gl_project_x(&win, vertices[idx1][0]);
-      i32_t y1 = gl_project_y(&win, vertices[idx1][1]);
-      gl_draw_line(&win, x0, y0, x1, y1, 0xFF00FF);
+      i32_t x0   = gls_project_x(&win, vertices[idx0][0]);
+      i32_t y0   = gls_project_y(&win, vertices[idx0][1]);
+      i32_t x1   = gls_project_x(&win, vertices[idx1][0]);
+      i32_t y1   = gls_project_y(&win, vertices[idx1][1]);
+      gls_draw_line(&win, x0, y0, x1, y1, 0xFF00FF);
     }
 
 
-    gl_blit_window(&gl, &win);
-
+    gls_blit_window(&ctx, &win);
   }
 
-  gl_destroy_window(&gl, &win);
-  gl_quit(&gl);
+  gls_destroy_window(&ctx, &win);
+  gls_quit(&ctx);
 
   return 0;
 }
