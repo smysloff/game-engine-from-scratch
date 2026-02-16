@@ -10,5 +10,8 @@
 #define CORE_IO_IMPLEMENTATION
 #include "./io.h"
 
+#define CORE_TIME_IMPLEMENTATION
+#include "./time.h"
+
 #define CORE_CONTAINERS_VECTOR_IMPLEMENTATION
 #include "./containers/vector.h"
