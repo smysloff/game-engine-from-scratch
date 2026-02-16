@@ -1,5 +1,5 @@
 
-// file: examples/xcb/fonts.c
+// file: tutorials/xcb/fonts.c
 
 #include <xcb/xcb.h>
 #include "core/core.h"

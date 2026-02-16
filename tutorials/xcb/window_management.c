@@ -1,5 +1,5 @@
 
-// file: examples/xcb/window_management.c
+// file: tutorials/xcb/window_management.c
 
 
 #include <xcb/xcb.h>

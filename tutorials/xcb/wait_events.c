@@ -1,5 +1,5 @@
 
-// examples/xcb/wait_events.c
+// tutorials/xcb/wait_events.c
 
 #include <xcb/xcb.h>
 #include "core/core.h"

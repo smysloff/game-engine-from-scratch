@@ -1,5 +1,5 @@
 
-// file: examples/xcb/cube3d.c
+// file: tutorials/xcb/cube3d.c
 
 #define GLS_IMPLEMENTATION
 #include "gls/gls.h"

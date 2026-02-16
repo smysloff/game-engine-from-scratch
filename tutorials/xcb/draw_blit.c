@@ -1,5 +1,5 @@
 
-// file: examples/xcb/draw_blit.c
+// file: tutorials/xcb/draw_blit.c
 
 #include <xcb/xcb.h>
 #include <xcb/xcb_image.h>

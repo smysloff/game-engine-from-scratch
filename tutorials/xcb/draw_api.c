@@ -1,5 +1,5 @@
 
-// file: examples/xcb/draw_api.c
+// file: tutrials/xcb/draw_api.c
 
 #include <xcb/xcb.h>
 #include "core/core.h"

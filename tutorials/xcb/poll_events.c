@@ -1,5 +1,5 @@
 
-// file: examples/xcb/poll_events.c
+// file: tutorials/xcb/poll_events.c
 
 #include <xcb/xcb.h>
 #include "core/core.h"

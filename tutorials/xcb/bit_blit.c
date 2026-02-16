@@ -1,5 +1,5 @@
 
-// file: examples/xcb/bit_blit.c
+// file: tutorials/xcb/bit_blit.c
 
 
 #include <xcb/xcb.h>
