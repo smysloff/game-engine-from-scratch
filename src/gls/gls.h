@@ -69,21 +69,21 @@ i32_t  gls_project_y(gls_window_t *window, double y);
 
 typedef struct gls_context_s
 {
-  xcb_connection_t     *connection;
-  xcb_screen_t         *screen;
-  xcb_generic_event_t  *event;
-  bool_t                loop;
+  xcb_connection_t    *connection;
+  xcb_screen_t        *screen;
+  xcb_generic_event_t *event;
+  bool_t               loop;
 } gls_context_t;
 
 typedef struct gls_window_s
 {
   xcb_window_t    id;
   xcb_gcontext_t  gc;
-  i32_t           width, height; // ? u32_t
-  i32_t           size;          // ? u32_t
-  i32_t           byte_size;     // ? u32_t
+  u32_t           width, height;
+  u32_t           size;
+  u32_t           byte_size;
   double          aspect_ratio;
-  i32_t          *frame_buffer;  // ? u32_t
+  u32_t          *frame_buffer;
   xcb_image_t    *image;
   xcb_pixmap_t    pixmap;
   xcb_atom_t      wm_delete_atom;
@@ -337,7 +337,7 @@ gls_fill_window(gls_window_t *window, argb_color_t color)
 {
   assert(window);
 
-  for (i32_t i = 0; i < window->size; ++i)
+  for (u32_t i = 0; i < window->size; ++i)
     window->frame_buffer[i] = color;
 }
 
@@ -347,8 +347,8 @@ gls_put_pixel(gls_window_t *window, i32_t x, i32_t y, argb_color_t color)
   assert(window);
 
   if (
-       x >= 0 && x < window->width
-    && y >= 0 && y < window->height
+       x >= 0 && (u32_t) x < window->width
+    && y >= 0 && (u32_t) y < window->height
   ) {
     window->frame_buffer[y * window->width + x] = color;
   }
