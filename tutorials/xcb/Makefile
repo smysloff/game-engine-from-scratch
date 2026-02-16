@@ -1,23 +1,20 @@
 
-# file: examples/Makefile
+# file: examples/xcb/Makefile
 
 CC := gcc
 RM := rm -rf
 
-INCLUDES := -I../src
+INCLUDES := -I../../src
 
-SOURCES := core/io.c \
-					 core/print_format.c \
-					 core/vector.c \
-					 tui/heart.c \
-					 xcb/open_window.c \
-					 xcb/wait_events.c \
-					 xcb/poll_events.c \
-					 xcb/draw_api.c \
-					 xcb/font.c \
-					 xcb/window_management.c \
-					 xcb/bit_blit.c \
-					 xcb/draw_blit.c
+SOURCES := open_window.c \
+					 wait_events.c \
+					 poll_events.c \
+					 draw_api.c \
+					 font.c \
+					 window_management.c \
+					 bit_blit.c \
+					 draw_blit.c \
+					 cube3d.c
 
 LIBS := xcb xcb-image
 
@@ -35,8 +32,9 @@ help:
 	@echo "  make [program]  - Build specific program"
 	@echo ""
 	@echo "Available programs:"
-	@for prog in $(PROGRAMS); do \
-		echo "  $$prog"; \
+	@i=1; for prog in $(PROGRAMS); do \
+		echo "  $$i. $$prog"; \
+		i=$$((i+1)); \
 	done
 
 clean:

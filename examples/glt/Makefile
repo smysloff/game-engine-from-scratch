@@ -8,10 +8,10 @@ INCLUDES := -I../../src
 
 SOURCES := heart.c
 
-#LIBS := xcb xcb-image
+LIBS := xcb xcb-image
 
 CFLAGS := -Wall -Werror -Wextra -lm -g #-O3
-#LFLAGS := $$(pkg-config --cflags --libs $(LIBS))
+LFLAGS := $$(pkg-config --cflags --libs $(LIBS))
 
 PROGRAMS := $(basename $(SOURCES))
 
@@ -34,7 +34,6 @@ clean:
 .PHONY: all clean help
 
 $(PROGRAMS): %: %.c
-#	@$(CC) $(INCLUDES) $(CFLAGS) $(LFLAGS) $< -o $@
 	@$(CC) $(INCLUDES) $(CFLAGS) $(LFLAGS) $< -o $@
 	@./$@
 
