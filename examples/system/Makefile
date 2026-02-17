@@ -6,11 +6,11 @@ RM := rm -rf
 
 INCLUDES := -I../../src
 
-SOURCES := datetime.c
+SOURCES := sysinfo.c
 
-LIBS := xcb xcb-image
+LIBS := xcb xcb-image xcb-util
 
-CFLAGS := -Wall -Werror -Wextra -lm -g #-O3
+CFLAGS := -Wall -Werror -Wextra -lm -g -O0
 LFLAGS := $$(pkg-config --cflags --libs $(LIBS))
 
 PROGRAMS := $(basename $(SOURCES))

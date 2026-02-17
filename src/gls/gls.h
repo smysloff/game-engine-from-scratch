@@ -5,6 +5,7 @@
 
 #include <xcb/xcb.h>
 #include <xcb/xcb_image.h>
+#include <xcb/xcb_util.h>
 #include "../core/core.h"
 
 
@@ -51,6 +52,8 @@ void   gls_show_window(gls_context_t *ctx, gls_window_t *window);
 void   gls_blit_window(gls_context_t *ctx, gls_window_t *window);
 
 void   gls_set_string_property(gls_context_t *ctx, gls_window_t *window, const char *atom_name, const char *atom_value, usize_t value_size);
+// @todo gls_set_utf8_property()
+void   gls_set_root_window_name(gls_context_t *ctx, const char *name);
 
 void   gls_start(gls_context_t *ctx);
 void   gls_stop(gls_context_t *ctx);
@@ -308,6 +311,26 @@ gls_set_string_property(
   );
 
   free(reply);
+}
+
+void
+gls_set_root_window_name(gls_context_t *ctx, const char *name)
+{
+  assert(ctx && ctx->connection);
+  assert(name);
+
+  xcb_change_property(
+    ctx->connection,
+    XCB_PROP_MODE_REPLACE,
+    ctx->screen->root,
+    XCB_ATOM_WM_NAME,
+    XCB_ATOM_STRING,
+    8,
+    string_length(name),
+    name
+  );
+
+  xcb_aux_sync(ctx->connection);
 }
 
 void
