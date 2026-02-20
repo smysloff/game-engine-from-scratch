@@ -4,6 +4,12 @@
 #define GLS_IMPLEMENTATION
 #include "gls/gls.h"
 
+#include <pwd.h>
+#include <limits.h>
+
+#include <xcb/xkb.h>
+
+
 char *
 smprintf(const char *fmt, ...)
 {
@@ -13,7 +19,6 @@ smprintf(const char *fmt, ...)
 
   assert(fmt);
 
-  // Get total length of result string
   va_start(args, fmt);
   len = vsnprintf(NULL, 0, fmt, args);
   va_end(args);
@@ -21,7 +26,6 @@ smprintf(const char *fmt, ...)
   result = malloc(++len);
   assert(result);
 
-  // Create result string and use length
   va_start(args, fmt);
   vsnprintf(result, len, fmt, args);
   va_end(args);
@@ -29,81 +33,88 @@ smprintf(const char *fmt, ...)
   return result;
 }
 
-typedef struct sysinfo_s
-{
-  char *login;
-  char *hostname;
-  char *os;
-  char *kernel;
-  char *cpu;
-  char *memory;
-  const char *datetime;
-} sysinfo_t;
-
-char *
+const char *
 get_login(void)
 {
-  return smprintf("%s", getlogin());
+  struct passwd *pw;
+  pw = getpwuid(getuid());
+  assert(pw && pw->pw_name);
+  return pw->pw_name;
 }
 
-char *
+const char *
 get_hostname(void)
 {
-  char buffer[256];
+  static char buffer[HOST_NAME_MAX + 1];
   int error;
 
-  error = gethostname(buffer, sizeof(buffer));
+  error = gethostname(buffer, HOST_NAME_MAX);
   assert(!error);
 
-  return smprintf("%s", buffer);
+  return buffer;
 }
+
+
+const char *
+get_keyboard_layout(gls_context_t *ctx)
+{
+  const char *layout_name;
+  xcb_xkb_get_kbd_by_name_cookie_t cookie;
+  xcb_xkb_get_kbd_by_name_reply_t *reply;
+
+  assert(ctx);
+
+  cookie = xcb_xkb_get_kbd_by_name(ctx->connection, XCB_XKB_ID_USE_CORE_KBD);
+  *reply = xcb_xkb_get_kbd_by_name_reply(ctx->connection, cookie, NULL);
+  assert(reply);
+
+  layout_name = xcb_xkb_get_names_names(reply);
+  free(reply);
+
+  return layout_name;
+}
+
+//const char *
+//get_keyboard_layout(void)
+//{
+//  static const char *layout = "ru";
+//  return layout;
+//}
 
 
 int
 main(void)
 {
-  // Variables
-  sysinfo_t sysinfo;
-  char *statusinfo;
-  //char *fetchinfo;
+  char *sysinfo;
+
+  const char *login;
+  const char *hostname;
+  const char *datetime;
+  //const char *layout;
+  int layout;
+
   gls_context_t ctx;
 
-  // Get user login
-  sysinfo.login = get_login();
-  print_string_endl(sysinfo.login);
 
-  // Get hostname
-  sysinfo.hostname = get_hostname();
-  print_string_endl(sysinfo.hostname);
-
-  // Connect to X-server, update WN_NAME and close connection
   gls_init(&ctx);
+
+  login    = get_login();
+  hostname = get_hostname();
 
   while (true)
   {
-    // Get DateTime
-    sysinfo.datetime = get_datetime(0, NULL);
-    assert(sysinfo.datetime);
+    datetime = get_datetime(0, NULL);
+    layout   = get_keyboard_layout(&ctx);
 
-    // Form StatusInfo string
-    statusinfo = smprintf("DateTime: %s", sysinfo.datetime);
-    assert(statusinfo);
+    sysinfo = smprintf("%s@%s %d %s", login, hostname, layout, datetime);
+    gls_set_root_window_name(&ctx, sysinfo);
+    print_string_endl(sysinfo);
 
-    // Set StatusInfo to Root Window
-    gls_set_root_window_name(&ctx, statusinfo);
-
-    // Cleanup
-    free(statusinfo);
-    //free(fetchinfo);
-
-    // Add delay
+    free(sysinfo);
     sleep(1);
   }
 
-  // Close connection and exit
   gls_quit(&ctx);
-  free(sysinfo.login);
-  free(sysinfo.hostname);
 
   return 0;
 }

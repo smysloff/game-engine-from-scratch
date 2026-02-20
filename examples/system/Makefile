@@ -8,7 +8,7 @@ INCLUDES := -I../../src
 
 SOURCES := sysinfo.c
 
-LIBS := xcb xcb-image xcb-util
+LIBS := xcb xcb-image xcb-util x11
 
 CFLAGS := -Wall -Werror -Wextra -lm -g -O0
 LFLAGS := $$(pkg-config --cflags --libs $(LIBS))
