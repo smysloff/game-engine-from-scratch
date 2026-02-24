@@ -1,144 +1,224 @@
+
+// file: examples/system/layout.c
+// compile: gcc layout.c `pkg-config --cflags --libs xcb xcb-xkb`
+
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <stdbool.h>
 #include <xcb/xcb.h>
 #include <xcb/xkb.h>
+
+
+char *strncpy_safe(char *dst, const char *src, size_t dsize);
+
+xcb_connection_t *x11_connection_create(void);
+void x11_connection_close(xcb_connection_t *connection);
+bool x11_xkb_use_extension_init(xcb_connection_t *connection);
+
+int get_keyboard_layout_group(xcb_connection_t *connection);
+const char *get_keyboard_layout_name(xcb_connection_t *connection);
+
 
 int
 main(void)
 {
-  xcb_connection_t *conn;
-  xcb_screen_t *screen;
-  int ret;
-  int32_t device_id;
-  struct xkb_context *ctx;
-  struct xkb_keymap *keymap;
-  struct xkb_state *state;
+  xcb_connection_t *connection;
 
-  // 1. Подключаемся к X серверу
-  conn = xcb_connect(NULL, NULL);
-  if (xcb_connection_has_error(conn))
+  if (!(connection = x11_connection_create()))
+    return EXIT_FAILURE;
+
+  if (!x11_xkb_use_extension_init(connection))
+    return EXIT_FAILURE;
+
+  printf("keyboard layout: %s\n", get_keyboard_layout_name(connection));
+
+  x11_connection_close(connection);
+  return EXIT_SUCCESS;
+}
+
+
+char *
+strncpy_safe(char *dst, const char *src, size_t dsize)
+{
+  if (dst && src && dsize)
   {
-    fprintf(stderr, "Не удалось подключиться к X серверу\n");
-    return 1;
+    strncpy(dst, src, dsize - 1);
+    dst[dsize - 1] = '\0';
+  }
+  return dst;
+}
+
+
+xcb_connection_t *
+x11_connection_create(void)
+{
+  xcb_connection_t *connection = xcb_connect(NULL, NULL);
+  if (xcb_connection_has_error(connection))
+  {
+    perror("Cannot create new connection to X-Server");
+    return NULL;
+  }
+  return connection;
+}
+
+void
+x11_connection_close(xcb_connection_t *connection)
+{
+  if (connection)
+    xcb_disconnect(connection);
+}
+
+bool
+x11_xkb_use_extension_init(xcb_connection_t *connection)
+{
+  bool supported;
+  xcb_xkb_use_extension_cookie_t  cookie;
+  xcb_xkb_use_extension_reply_t  *reply;
+
+  if (!connection)
+    return false;
+
+  cookie = xcb_xkb_use_extension(
+    connection,
+    XCB_XKB_MAJOR_VERSION,
+    XCB_XKB_MINOR_VERSION
+  );
+
+  reply = xcb_xkb_use_extension_reply(connection, cookie, NULL);
+  supported = reply && reply->supported;
+
+  if (!supported)
+    perror("XKB extension to X-Server is not supported");
+
+  free(reply);
+  return supported;
+}
+
+// returns: id of keyboard layout group
+//   or -1 on failure
+int
+get_keyboard_layout_group(xcb_connection_t *connection)
+{
+  int group;
+
+  xcb_xkb_get_state_cookie_t  state_cookie;
+  xcb_xkb_get_state_reply_t  *state_reply;
+
+  if (!connection)
+  {
+    perror("Connecion to X-Server is NULL");
+    return -1;
   }
 
-  // 2. Получаем первый экран
-  screen = xcb_setup_roots_iterator(xcb_get_setup(conn)).data;
+  state_cookie = xcb_xkb_get_state(connection, XCB_XKB_ID_USE_CORE_KBD);
+  state_reply  = xcb_xkb_get_state_reply(connection, state_cookie, NULL);
 
-  // 3. Инициализируем XKB extension
-  ret = xkb_x11_setup_xkb_extension(conn,
-                                    XKB_X11_MIN_MAJOR_XKB_VERSION,
-                                    XKB_X11_MIN_MINOR_XKB_VERSION,
-                                    0, NULL, NULL, NULL, NULL);
-  if (!ret)
+  if (!state_reply)
   {
-    fprintf(stderr, "Не удалось инициализировать XKB extension\n");
-    xcb_disconnect(conn);
-    return 1;
+    perror("Cannot get keyboard layout group");
+    return -1;
   }
 
-  // 4. Получаем ID устройства core keyboard
-  device_id = xkb_x11_get_core_keyboard_device_id(conn);
-  if (device_id == -1)
+  group = state_reply->group;
+  free(state_reply);
+
+  return group;
+}
+
+
+const char *
+get_keyboard_layout_name(xcb_connection_t *connection)
+{
+  static char keyboard_layout[64];
+  int group;
+
+  xcb_xkb_get_names_cookie_t       names_cookie;
+  xcb_xkb_get_names_reply_t       *names_reply;
+  xcb_xkb_get_names_value_list_t  *value_list;
+  xcb_atom_t                      *group_names;
+  xcb_get_atom_name_cookie_t       atom_cookie;
+  xcb_get_atom_name_reply_t       *atom_reply;
+  uint8_t                         *group_names_base;
+
+
+  // get keyboard layout group id
+
+  group = get_keyboard_layout_group(connection);
+  if (group == -1)
   {
-    fprintf(stderr, "Не удалось получить ID клавиатуры\n");
-    xcb_disconnect(conn);
-    return 1;
+    strncpy_safe(keyboard_layout, "unknown", sizeof(keyboard_layout));
+    return keyboard_layout;
   }
 
-  // 5. Создаем контекст xkbcommon
-  ctx = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
-  if (!ctx)
+
+  // get keyboard layout names list
+
+  names_cookie = xcb_xkb_get_names(
+    connection,
+    XCB_XKB_ID_USE_CORE_KBD,
+    XCB_XKB_NAME_DETAIL_GROUP_NAMES
+  );
+
+  names_reply = xcb_xkb_get_names_reply(connection, names_cookie, NULL);
+
+  if (!names_reply)
   {
-    fprintf(stderr, "Не удалось создать контекст xkbcommon\n");
-    xcb_disconnect(conn);
-    return 1;
+    perror("Cannot get keyboard layout names");
+    strncpy_safe(keyboard_layout, "unknown", sizeof(keyboard_layout));
+    return keyboard_layout;
   }
 
-  // 6. Получаем текущую раскладку
-  keymap = xkb_x11_keymap_new_from_device(ctx, conn, device_id,
-                                          XKB_KEYMAP_COMPILE_NO_FLAGS);
-  if (!keymap)
+
+  // parse value_list to get atoms
+  // get atom's name by group index
+  // get atom's value as result
+
+  value_list  = xcb_xkb_get_names_value_list(names_reply);
+
+  //group_names_base = (uint8_t *) value_list
+  //  + names_reply->nTypes       * sizeof(uint32_t)
+  //  + names_reply->nIndicators  * sizeof(uint32_t)
+  //  + names_reply->nKeys        * sizeof(uint32_t)
+  //  + names_reply->nKeyAliases  * sizeof(xcb_xkb_key_alias_t)
+  //  + names_reply->nRadioGroups * sizeof(uint8_t)
+  //  + names_reply->nKTLevels    * sizeof(uint8_t)
+  //  + names_reply->nGroups;    // other fields
+
+  //group_names = (xcb_atom_t *) group_names_base;
+
+  group_names = xcb_xkb_get_names_value_list_group_names(value_list);
+
+  if (group_names && group < names_reply->nGroups)
   {
-    fprintf(stderr, "Не удалось получить раскладку\n");
-    xkb_context_unref(ctx);
-    xcb_disconnect(conn);
-    return 1;
-  }
-
-  // 7. Создаем состояние
-  state = xkb_x11_state_new_from_device(keymap, conn, device_id);
-  if (!state)
-  {
-    fprintf(stderr, "Не удалось создать состояние\n");
-    xkb_keymap_unref(keymap);
-    xkb_context_unref(ctx);
-    xcb_disconnect(conn);
-    return 1;
-  }
-
-  // 8. Получаем и выводим информацию о текущей раскладке
-  const char *layout_name = xkb_keymap_layout_get_name(keymap, 0);
-  printf("Текущая раскладка: %s\n", layout_name ? layout_name : "unknown");
-
-/*
-  // 9. Подписываемся на события изменения состояния
-  uint32_t values[3] = { 0, 0, 0 };
-  xcb_xkb_select_events(conn,
-                        device_id,
-                        XCB_XKB_EVENT_TYPE_STATE_NOTIFY, // what мы хотим получать
-                        0,                               // clear
-                        0,                               // select all
-                        0, 0, values);
-
-  xcb_flush(conn);
-
-  printf("Ожидание событий клавиатуры... (Нажмите Ctrl+C для выхода)\n");
-
-  // 10. Главный цикл обработки событий
-  xcb_generic_event_t *event;
-  while ((event = xcb_wait_for_event(conn)))
-  {
-    uint8_t response_type = event->response_type & ~0x80;
-
-    // Проверяем, является ли событие XKB событием
-    if (response_type == XCB_XKB_STATE_NOTIFY)
+    if (group_names[group] != XCB_ATOM_NONE)
     {
-      xcb_xkb_state_notify_event_t *kb_event = (xcb_xkb_state_notify_event_t*) event;
+      atom_cookie = xcb_get_atom_name(connection, group_names[group]);
+      atom_reply  = xcb_get_atom_name_reply(connection, atom_cookie, NULL);
 
-      // Обновляем состояние
-      xkb_state_update_mask(state,
-                            kb_event->baseMods,
-                            kb_event->latchedMods,
-                            kb_event->lockedMods,
-                            kb_event->baseGroup,
-                            kb_event->latchedGroup,
-                            kb_event->lockedGroup);
+      if (atom_reply)
+      {
+        char *name   = (char *) xcb_get_atom_name_name(atom_reply);
+        int name_len = xcb_get_atom_name_name_length(atom_reply);
+        snprintf(keyboard_layout, sizeof(keyboard_layout), "%.*s", name_len, name);
+        free(atom_reply);
+      }
 
-      // Получаем активную группу (раскладку)
-      xkb_layout_index_t layout = xkb_state_serialize_layout(state, XKB_STATE_LAYOUT_EFFECTIVE);
-      const char *new_layout = xkb_keymap_layout_get_name(keymap, layout);
-
-      printf("Раскладка изменена: %s (группа %d)\n", new_layout ? new_layout : "unknown", layout);
-
-      // Проверяем активные модификаторы
-      if (xkb_state_mod_name_is_active(state, XKB_MOD_NAME_CTRL, XKB_STATE_MODS_EFFECTIVE))
-        printf("  Ctrl активен\n");
-
-      if (xkb_state_mod_name_is_active(state, XKB_MOD_NAME_ALT, XKB_STATE_MODS_EFFECTIVE))
-        printf("  Alt активен\n");
+      else
+        snprintf(keyboard_layout, sizeof(keyboard_layout), "%d", group);
     }
 
-    free(event);
+    else
+      snprintf(keyboard_layout, sizeof(keyboard_layout), "%d", group);
   }
-*/
 
-  // 11. Очистка ресурсов
-  xkb_state_unref(state);
-  xkb_keymap_unref(keymap);
-  xkb_context_unref(ctx);
-  xcb_disconnect(conn);
+  else
+    snprintf(keyboard_layout, sizeof(keyboard_layout), "%d", group);
 
-  return 0;
+
+  // EXIT SUCCESS
+
+  free(names_reply);
+  return keyboard_layout;
 }
