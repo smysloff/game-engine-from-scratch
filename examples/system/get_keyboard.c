@@ -10,6 +10,7 @@
 #include <xcb/xkb.h>
 #include <xkbcommon/xkbcommon-x11.h>
 
+
 typedef struct x11_xkb_layout_s
 {
   struct xkb_context *context;
@@ -93,14 +94,12 @@ x11_xkb_layout_get_fullname(
   x11_xkb_layout_t *layout
 ) {
   const char *fullname;
-  xkb_layout_index_t num_layouts; // @todo
   xcb_xkb_get_state_cookie_t cookie;
   xcb_xkb_get_state_reply_t *reply;
 
   assert(connection);
   assert(layout);
 
-  num_layouts = xkb_keymap_num_layouts(layout->keymap);
   cookie = xcb_xkb_get_state(connection, layout->device_id);
   reply = xcb_xkb_get_state_reply(connection, cookie, NULL);
   assert(reply);

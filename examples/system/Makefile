@@ -6,9 +6,13 @@ RM := rm -rf
 
 INCLUDES := -I../../src
 
-SOURCES := sysinfo.c
+SOURCES := keyboard.c \
+					 get_keyboard.c \
+					 sysinfo.c
 
-LIBS := xcb xcb-image xcb-util x11
+LIBS := xcb xcb-image xcb-util \
+				xcb-xkb xkbcommon-x11  \
+				x11
 
 CFLAGS := -Wall -Werror -Wextra -lm -g -O0
 LFLAGS := $$(pkg-config --cflags --libs $(LIBS))

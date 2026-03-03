@@ -1,0 +1,19 @@
+[
+  {
+    "file": "sysinfo.c",
+    "arguments": [
+      "gcc",
+      "-I../../src",
+      "-Wall",
+      "-Werror",
+      "-Wextra",
+      "-g",
+      "-O0",
+      "sysinfo.c",
+      "-o",
+      "sysinfo"
+    ],
+    "directory": "/home/smysloff/Code/gefs/examples/system",
+    "output": "sysinfo"
+  }
+]
