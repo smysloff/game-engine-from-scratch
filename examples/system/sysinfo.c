@@ -1,7 +1,6 @@
 
 // file: examples/system/sysinfo.c
 
-#include <assert.h>
 #include <ctype.h>
 #include <limits.h>
 #include <pwd.h>
@@ -27,25 +26,14 @@ typedef struct keyboard_layout_s
 
 char *smprintf(const char *fmt, ...);
 
-xcb_connection_t *connect(bool use_xkb_ext);
-
-void disconnect(xcb_connection_t *con)
-  __attribute__((nonnull));
-
-keyboard_layout_t *get_keyboard_layout(xcb_connection_t *con)
-  __attribute__((nonnull));
-
-void free_keyboard_layout(keyboard_layout_t *kbd)
-  __attribute__((nonnull));
-
-const char *get_keyboard_layout_fullname(xcb_connection_t *con, keyboard_layout_t *kbd)
-  __attribute__((nonnull));
-
-const char *get_keyboard_layout_shortname(xcb_connection_t *con, keyboard_layout_t *kbd)
-  __attribute__((nonnull));
-
-void use_xkb_extension(xcb_connection_t *con)
-  __attribute__((nonnull));
+xcb_connection_t *create_connection(bool use_xkb_ext);
+void close_connection(xcb_connection_t *con);
+keyboard_layout_t *get_keyboard_layout(xcb_connection_t *con);
+void free_keyboard_layout(keyboard_layout_t *kbd);
+const char *get_keyboard_layout_fullname(xcb_connection_t *con, keyboard_layout_t *kbd);
+const char *get_keyboard_layout_shortname(xcb_connection_t *con, keyboard_layout_t *kbd);
+bool use_xkb_extension(xcb_connection_t *con);
+void cleanup(xcb_connection_t *con, keyboard_layout_t *kbd, char *info);
 
 const char *get_login(void);
 const char *get_hostname(void);
@@ -62,24 +50,41 @@ main(void)
   xcb_connection_t *con;
   keyboard_layout_t *kbd;
 
-  con = connect(true);
+  con = NULL;
+  kbd = NULL;
+  info = NULL;
+
+  con = create_connection(true);
+  if (!con)
+  {
+    perror("Cannot create connection to X-Server");
+    cleanup(con, kbd, info);
+    return EXIT_FAILURE;
+  }
+
   kbd = get_keyboard_layout(con);
+  if (!kbd)
+  {
+    perror("Cannot get keyboard layout from X-Server");
+    cleanup(con, kbd, info);
+    return EXIT_FAILURE;
+  }
 
   lang = get_keyboard_layout_shortname(con, kbd);
   date = get_datetime();
 
-  if (!(info = smprintf("%s %s", lang, date)))
+  info = smprintf("%s %s", lang, date);
+  if (!info)
   {
-    fprintf(stderr, "Cannot create system info string\n");
-    exit(EXIT_FAILURE);
+    perror("Cannot create system info string");
+    cleanup(con, kbd, info);
+    return EXIT_FAILURE;
   }
 
   //  gls_set_root_window_name(&ctx, sysinfo);
   puts(info);
 
-  free(info);
-  free_keyboard_layout(kbd);
-  disconnect(con);
+  cleanup(con, kbd, info);
 
   return EXIT_SUCCESS;
 }
@@ -92,14 +97,15 @@ smprintf(const char *fmt, ...)
   va_list args;
   int len;
 
-  assert(fmt);
+  if (!fmt)
+    return NULL;
 
   va_start(args, fmt);
   len = vsnprintf(NULL, 0, fmt, args);
   va_end(args);
 
-  result = malloc(++len);
-  assert(result);
+  if (!(result = malloc(++len)))
+    return NULL;
 
   va_start(args, fmt);
   vsnprintf(result, len, fmt, args);
@@ -110,30 +116,26 @@ smprintf(const char *fmt, ...)
 
 
 xcb_connection_t *
-connect(bool use_xkb_ext)
+create_connection(bool use_kbd_ext)
 {
   xcb_connection_t *con;
 
   con = xcb_connect(NULL, NULL);
   if (xcb_connection_has_error(con))
-  {
-    perror("error!");
-    fprintf(stderr, "Cannot create connection to X-Server\n");
-    exit(EXIT_FAILURE);
-  }
-  printf("success");
+    return NULL;
 
-  if (use_xkb_ext)
-    use_xkb_extension(con);
+  if (use_kbd_ext)
+    if (!use_xkb_extension(con))
+      return NULL;
 
   return con;
 }
 
 void
-disconnect(xcb_connection_t *con)
+close_connection(xcb_connection_t *con)
 {
-  assert(con);
-  xcb_disconnect(con);
+  if (con)
+    xcb_disconnect(con);
 }
 
 keyboard_layout_t *
@@ -141,24 +143,28 @@ get_keyboard_layout(xcb_connection_t *con)
 {
   keyboard_layout_t *kbd;
 
-  assert(con);
+  if (con)
+    return NULL;
 
-  if (!(kbd = malloc(sizeof(*kbd))))
+  kbd = malloc(sizeof(*kbd));
+  if (!kbd)
   {
-    fprintf(stderr, "Cannot allocate memory for keyboard_layout_t\n");
-    exit(EXIT_FAILURE);
+    perror("Cannot allocate memory for keyboard_layout_t");
+    return NULL;
   }
 
-  if (!(kbd->context = xkb_context_new(XKB_CONTEXT_NO_FLAGS)))
+  kbd->context = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
+  if (!kbd->context)
   {
-    fprintf(stderr, "Cannot create new XKB context\n");
-    exit(EXIT_FAILURE);
+    perror("Cannot create new XKB context");
+    return NULL;
   }
 
-  if ((kbd->device_id = xkb_x11_get_core_keyboard_device_id(con)) == -1)
+  kbd->device_id = xkb_x11_get_core_keyboard_device_id(con);
+  if (kbd->device_id == -1)
   {
-    fprintf(stderr, "Cannot get keyboard device id\n");
-    exit(EXIT_FAILURE);
+    perror("Cannot get keyboard device id");
+    return NULL;
   }
 
   kbd->keymap = xkb_x11_keymap_new_from_device(
@@ -166,16 +172,15 @@ get_keyboard_layout(xcb_connection_t *con)
 
   if (!kbd->keymap)
   {
-    fprintf(stderr, "Cannot get XKB layout\n");
-    exit(EXIT_FAILURE);
+    perror("Cannot get keyboard keymap");
+    return NULL;
   }
 
   kbd->state = xkb_x11_state_new_from_device(kbd->keymap, con, kbd->device_id);
-
   if (!kbd->state)
   {
-    fprintf(stderr, "Cannot get XKB state\n");
-    exit(EXIT_FAILURE);
+    perror("Cannot get XKB state");
+    return NULL;
   }
 
   return kbd;
@@ -184,18 +189,19 @@ get_keyboard_layout(xcb_connection_t *con)
 void
 free_keyboard_layout(keyboard_layout_t *kbd)
 {
-  assert(kbd);
+  if (kbd)
+  {
+    if (kbd->state)
+      xkb_state_unref(kbd->state);
 
-  if (kbd->state)
-    xkb_state_unref(kbd->state);
+    if (kbd->keymap)
+      xkb_keymap_unref(kbd->keymap);
 
-  if (kbd->keymap)
-    xkb_keymap_unref(kbd->keymap);
+    if (kbd->context)
+      xkb_context_unref(kbd->context);
 
-  if (kbd->context)
-    xkb_context_unref(kbd->context);
-
-  free(kbd);
+    free(kbd);
+  }
 }
 
 const char *
@@ -205,15 +211,15 @@ get_keyboard_layout_fullname(xcb_connection_t *con, keyboard_layout_t *kbd)
   xcb_xkb_get_state_cookie_t cookie;
   xcb_xkb_get_state_reply_t *reply;
 
-  assert(con);
-  assert(kbd);
+  if (!con || !kbd)
+    return NULL;
 
   cookie = xcb_xkb_get_state(con, kbd->device_id);
   reply = xcb_xkb_get_state_reply(con, cookie, NULL);
   if (!reply)
   {
-    fprintf(stderr, "Cannot get state reply\n");
-    exit(EXIT_FAILURE);
+    perror("Cannot get state reply");
+    return NULL;
   }
 
   buffer = xkb_keymap_layout_get_name(kbd->keymap, reply->lockedGroup);
@@ -228,8 +234,12 @@ get_keyboard_layout_shortname(xcb_connection_t *con, keyboard_layout_t *kbd)
   static char buffer[3];
   const char *fullname;
 
-  assert(con);
-  assert(kbd);
+  buffer[0] = '?';
+  buffer[1] = '?';
+  buffer[2] = '\0';
+
+  if (!con || !kbd)
+    return buffer;
 
   fullname = get_keyboard_layout_fullname(con, kbd);
 
@@ -238,36 +248,43 @@ get_keyboard_layout_shortname(xcb_connection_t *con, keyboard_layout_t *kbd)
     buffer[0] = tolower(fullname[0]);
     buffer[1] = tolower(fullname[1]);
   }
-  else
-  {
-    buffer[0] = '?';
-    buffer[1] = '?';
-  }
-  buffer[2] = '\0';
 
   return buffer;
 }
 
-void
+bool
 use_xkb_extension(xcb_connection_t *con)
 {
   xcb_xkb_use_extension_cookie_t cookie;
   xcb_xkb_use_extension_reply_t *reply;
 
-  assert(con);
+  if (!con)
+    return false;
 
-  cookie = xcb_xkb_use_extension(
-    con, XCB_XKB_MAJOR_VERSION, XCB_XKB_MINOR_VERSION);
+  cookie = xcb_xkb_use_extension(con,
+    XCB_XKB_MAJOR_VERSION, XCB_XKB_MINOR_VERSION);
 
   reply = xcb_xkb_use_extension_reply(con, cookie, NULL);
 
   if (!reply || !reply->supported)
-  {
-    fprintf(stderr, "Cannot use XKB extension\n");
-    exit(EXIT_SUCCESS);
-  }
+    return false;
 
   free(reply);
+
+  return true;
+}
+
+void
+cleanup(xcb_connection_t *con, keyboard_layout_t *kbd, char *info)
+{
+  if (info)
+    free(info);
+
+  if (kbd)
+    free_keyboard_layout(kbd);
+
+  if (con)
+    close_connection(con);
 }
 
 
@@ -275,30 +292,15 @@ const char *
 get_hostname(void)
 {
   static char buffer[HOST_NAME_MAX + 1];
-  int error;
-
-  if ((error = gethostname(buffer, HOST_NAME_MAX)))
-  {
-    fprintf(stderr, "Cannot get hostname\n");
-    exit(EXIT_FAILURE);
-  }
-
-  return buffer;
+  return (gethostname(buffer, HOST_NAME_MAX) ? NULL : buffer);
 }
 
 const char *
 get_login(void)
 {
   struct passwd *pw;
-
   pw = getpwuid(getuid());
-  if (!pw || !pw->pw_name)
-  {
-    fprintf(stderr, "Cannot get login\n");
-    exit(EXIT_FAILURE);
-  }
-
-  return pw->pw_name;
+  return ((pw && pw->pw_name) ? pw->pw_name : NULL);
 }
 
 const char *
