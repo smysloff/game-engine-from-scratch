@@ -1,7 +1,10 @@
 
+// file: examples/system/test.c
+
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+
 #include <xcb/xcb.h>
 #include <xcb/xkb.h>
 #include <xkbcommon/xkbcommon-x11.h>
@@ -85,14 +88,18 @@ free_keyboard_layout(keyboard_layout_t *kbd)
     if (kbd->context)
       xkb_context_unref(kbd->context);
 
-    free()
+    free(kbd);
   }
 }
 
 keyboard_layout_t *
 get_keyboard_layout(xcb_connection_t *con)
 {
+  keyboard_layout_t *kbd;
 
+
+
+  return kbd;
 }
 
 
