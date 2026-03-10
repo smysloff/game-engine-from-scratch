@@ -1,14 +1,12 @@
 
-# file: examples/core/Makefile
+# file: examples/system/Makefile
 
 CC := gcc
 RM := rm -rf
 
 INCLUDES := -I../../src
 
-SOURCES := keyboard.c \
-					 get_keyboard.c \
-					 sysinfo.c
+SOURCES := status.c
 
 LIBS := xcb xcb-image xcb-util \
 				xcb-xkb xkbcommon-x11  \
