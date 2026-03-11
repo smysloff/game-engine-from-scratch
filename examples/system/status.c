@@ -19,6 +19,7 @@ typedef struct connection_s
 {
   xcb_connection_t *ptr;
   xcb_screen_t *screen;
+  xcb_generic_event_t *event;
 } connection_t;
 
 
@@ -38,7 +39,7 @@ void close_connection(connection_t *con);
 bool use_xkb_extension(connection_t *con);
 keyboard_layout_t *get_keyboard_layout(connection_t *con);
 void free_keyboard_layout(keyboard_layout_t *kbd);
-bool select_xkb_extension(connection_t *con, keyboard_layout_t *kbd);
+bool select_xkb_events(connection_t *con, keyboard_layout_t *kbd);
 const char *get_keyboard_layout_fullname(connection_t *con, keyboard_layout_t *kbd);
 const char *get_keyboard_layout_shortname(connection_t *con, keyboard_layout_t *kbd);
 const char *get_datetime(void);
@@ -56,7 +57,6 @@ main(void)
   if (!con)
   {
     perror("Cannot create connection to X-Server and/or use XKB extension");
-    close_connection(con);
     return EXIT_FAILURE;
   }
 
@@ -64,20 +64,48 @@ main(void)
   if (!kbd)
   {
     perror("Cannot get keyboard layout");
+    close_connection(con);
+    return EXIT_FAILURE;
+  }
+
+  if (!select_xkb_events(con, kbd))
+  {
+    perror("Cannot select XKB events");
     free_keyboard_layout(kbd);
     close_connection(con);
     return EXIT_FAILURE;
   }
 
+  update_status(con, kbd);
+
   while (true)
   {
-    if (!update_status(con, kbd))
+    if (!(con->event = xcb_wait_for_event(con->ptr)))
+      break;
+
+    switch (con->event->response_type & ~0x80)
     {
-      free_keyboard_layout(kbd);
-      close_connection(con);
-      return EXIT_FAILURE;
+      case XCB_XKB_STATE_NOTIFY:
+      {
+        printf("1\n");
+        xcb_xkb_state_notify_event_t *state =
+          (xcb_xkb_state_notify_event_t *) con->event;
+
+        if (state->changed & XCB_XKB_STATE_PART_GROUP_STATE)
+        {
+          printf("2\n");
+          if (state->lockedGroup != kbd->last_group)
+          {
+            printf("3\n");
+            update_status(con, kbd);
+            printf("4\n");
+          }
+        }
+      }
     }
-    sleep(1);
+
+    free(con->event);
+    con->event = NULL;
   }
 
   free_keyboard_layout(kbd);
@@ -100,7 +128,7 @@ smprintf(const char *fmt, ...)
   len = vsnprintf(NULL, 0, fmt, args);
   va_end(args);
 
-  result = malloc(++len);
+  result = malloc(++len); // add byte for null-termination
   if (!result)
     return NULL;
 
@@ -129,6 +157,7 @@ create_connection(bool use_kbd_ext)
   }
 
   con->screen = xcb_setup_roots_iterator(xcb_get_setup(con->ptr)).data;
+  con->event = NULL;
 
   if (use_kbd_ext)
   {
@@ -213,7 +242,13 @@ get_keyboard_layout(connection_t *con)
   }
 
   kbd->state = xkb_x11_state_new_from_device(kbd->keymap, con->ptr, kbd->device_id);
-  kbd->last_group = 0;
+  if (!kbd->state)
+  {
+    free_keyboard_layout(kbd);
+    return NULL;
+  }
+
+  kbd->last_group = -1;
 
   return kbd;
 }
@@ -239,7 +274,7 @@ free_keyboard_layout(keyboard_layout_t *kbd)
 
 
 bool
-select_xkb_extension(connection_t *con, keyboard_layout_t *kbd)
+select_xkb_events(connection_t *con, keyboard_layout_t *kbd)
 {
   xcb_void_cookie_t cookie;
   xcb_generic_error_t *error;
@@ -276,7 +311,7 @@ select_xkb_extension(connection_t *con, keyboard_layout_t *kbd)
   );
 
   error = xcb_request_check(con->ptr, cookie);
-  if (!error)
+  if (error)
   {
     free(error);
     return false;
@@ -317,7 +352,7 @@ get_keyboard_layout_shortname(connection_t *con, keyboard_layout_t *kbd)
   const char *name;
 
   if (!con || !con->ptr || !kbd)
-    NULL;
+    return NULL;
 
   buffer[0] = '?';
   buffer[1] = '?';
@@ -345,6 +380,9 @@ get_datetime(void)
 
   rawtime = time(NULL);
   timeinfo = localtime(&rawtime);
+
+  if (!timeinfo)
+    return "??";
 
   written_bytes = strftime(datetime, sizeof(datetime), "%c", timeinfo);
 

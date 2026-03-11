@@ -6,7 +6,9 @@ RM := rm -rf
 
 INCLUDES := -I../../src
 
-SOURCES := status.c
+SOURCES := status.c \
+					 test.c \
+					 test2.c
 
 LIBS := xcb xcb-image xcb-util \
 				xcb-xkb xkbcommon-x11  \
