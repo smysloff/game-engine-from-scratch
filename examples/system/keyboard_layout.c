@@ -1,5 +1,5 @@
 
-// file: examples/system/test2.c
+// file: examples/system/keyboard_layout.c
 
 #include <ctype.h>
 #include <stdlib.h>

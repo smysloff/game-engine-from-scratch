@@ -7,8 +7,7 @@ RM := rm -rf
 INCLUDES := -I../../src
 
 SOURCES := status.c \
-					 test.c \
-					 test2.c
+					 keyboard_layout.c \
 
 LIBS := xcb xcb-image xcb-util \
 				xcb-xkb xkbcommon-x11  \
