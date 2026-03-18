@@ -11,6 +11,8 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
 
 
 // ============================================================================
@@ -244,30 +246,68 @@ msg_list_print(msg_list_t *list)
 int
 main(void)
 {
+  char buff[MSG_LENGTH];
   char name[MSG_LENGTH];
   char host[MSG_LENGTH];
-  char buffer[MSG_LENGTH];
+  int port;
+  bool offline;
   msg_list_t messages = {0};
+
 
   erase_display();
   fflush(stdout);
 
   set_cursor_position(1, 1);
   get_user_input("name: ", name, sizeof(name));
-  get_user_input("host: ", host, sizeof(host));
+  get_user_input("host: ", buff, sizeof(buff));
+
+  char *colon;
+  size_t len;
+
+  colon = strchr(buff, ':');
+
+  if (colon)
+  {
+    len = colon - buff;
+    port = atoi(colon + 1);
+  }
+  else
+  {
+    len = strlen(buff);
+    port = 80;
+  }
+  strncpy(host, buff, len);
+  host[len] = '\0';
+
+  printf("connencted to %s:%d\n", host, port);
+
+  int sockfd;
+  struct sockaddr_in addr;
+  socklen_t soclken;
+
+  offline = ((sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) != -1);
+
 
   // @todo handle connection to server
   //       (now it just dummy logic
   //        just skip this place)
-  printf("Cannot connect to '%s'\n", host);
-  printf("You are in offline-mode\n");
-  printf("Talk to yourself? ('y' or 'n')\n");
+  if (offline)
+  {
+    printf("Cannot connect to '%s:%d'\n", host, port);
+    printf("You are in offline-mode\n");
+    printf("Talk to yourself? ('y' or 'n')\n");
 
-  get_user_input("> ", buffer, sizeof(buffer));
-  if (tolower(buffer[0]) != 'y')
-    return EXIT_SUCCESS;
+    get_user_input("> ", buff, sizeof(buff));
+    if (tolower(buff[0]) != 'y')
+      return EXIT_SUCCESS;
 
-  msg_list_append(&messages, name, "[joined the chat]");
+    msg_list_append(&messages, name, "[joined the chat]");
+  }
+
+  else
+  {
+    //connect();
+  }
 
   for (bool quit = false; !quit; )
   {
@@ -284,27 +324,25 @@ main(void)
     set_cursor_position(MSG_LIMIT + 2, 1);
     erase_current_line();
 
-    if (!get_user_input("> ", buffer, sizeof(buffer)))
+    if (!get_user_input("> ", buff, sizeof(buff)))
       continue;
 
-    if (buffer[0] == '\0')
+    if (buff[0] == '\0')
       continue;
 
 
     // handle commands
 
-    if (
-      !strcmp(buffer, "/exit")
-      || !strcmp(buffer, "/quit")
-    ) {
+    if (!strcmp(buff, "/exit") || !strcmp(buff, "/quit"))
+    {
       quit = true;
       continue;
     }
 
 
     // append new msg_item to msg_list
-
-    msg_list_append(&messages, name, buffer);
+    if (offline)
+      msg_list_append(&messages, name, buff);
   }
 
   msg_list_free(&messages);
