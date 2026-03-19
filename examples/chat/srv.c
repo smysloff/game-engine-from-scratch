@@ -12,16 +12,21 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <sys/socket.h>
 #include <netinet/in.h>
+#include <sys/time.h>
+#include <sys/socket.h>
+#include <sys/select.h>
+#include <errno.h>
 
 
 // ============================================================================
 // Config options
 // ============================================================================
 
-#define MSG_LIMIT 8
-#define MSG_LENGTH 256
+#define HOST INADDR_ANY
+#define PORT 6969
+#define MSG_LEN 256
+#define FDS_MAX 8
 
 
 // ============================================================================
@@ -31,52 +36,81 @@
 int
 main(void)
 {
-  //int pool[8]; // sockets pool
-  int connfd;  // connection or connector
-  int clientfd;
+  int server;
+  int client;
+  int clients[FDS_MAX];
+  fd_set readfds;
+  int maxfd;
+  struct sockaddr_in addr;
+  socklen_t socklen;
+  struct timeval delay;
+  char buff[MSG_LEN];
+  bool quit;
+  int opt;
 
-  if ((connfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1)
+
+  for (int i = 0; i < FDS_MAX; ++i)
+    clients[i] = -1;
+
+  socklen = sizeof(addr);
+  memset(&addr, '\0', sizeof(addr));
+  addr.sin_family = PF_INET;
+  addr.sin_addr.s_addr = htonl(HOST);
+  addr.sin_port = htons(PORT);
+
+  if ((server = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1)
   {
     perror("socket");
     return EXIT_FAILURE;
   }
-  //pool[0] = connfd;
 
-  struct sockaddr_in conn_addr;
-  conn_addr.sin_family = AF_INET;
-  conn_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-  conn_addr.sin_port = htons(3000);
+  opt = 1;
+  if (setsockopt(server, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1)
+  {
+    perror("setsockopt");
+    close(server);
+    return EXIT_FAILURE;
+  }
 
-  if (bind(connfd, (struct sockaddr *) &conn_addr, sizeof(conn_addr)) == -1)
+  if (bind(server, (struct sockaddr *) &addr, sizeof(addr)) == -1)
   {
     perror("bind");
-    close(connfd);
+    close(server);
     return EXIT_FAILURE;
   }
 
-  if (listen(connfd, SOMAXCONN) == -1)
+  if (listen(server, SOMAXCONN) == -1)
   {
     perror("listen");
-    close(connfd);
+    close(server);
     return EXIT_FAILURE;
   }
 
-  for (bool quit = false; !quit; )
-  {
-    struct sockaddr_in client_addr;
-    socklen_t client_len = sizeof(client_addr);
-    clientfd = accept(connfd, (struct sockaddr *) &client_addr, &client_len);
+  printf("Chat server started on port %d\n", PORT);
 
-    char buffer[32] = {0};
-    strcpy(buffer, "[joined the chat]\n");
+
+  maxfd = server;
+  quit = false;
+
+  while (!quit)
+  {
+    FD_ZERO(&readfds);
+    FD_SET(server, &readfds);
+
+    memset(&addr, '\0', sizeof(addr));
+    client = accept(server, (struct sockaddr *) &addr, &socklen);
+
+    memset(buff, '\0', sizeof(buff));
+    strcpy(buff, "[joined the chat]\n");
+
     while (1)
     {
-      send(clientfd, buffer, strlen(buffer) + 1, 0);
+      send(server, buff, strlen(buff) + 1, 0);
       sleep(2);
     }
   }
 
   // cleanup and exit
-  close(connfd);
+  close(server);
   return EXIT_SUCCESS;
 }

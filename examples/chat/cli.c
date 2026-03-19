@@ -246,13 +246,12 @@ msg_list_print(msg_list_t *list)
 int
 main(void)
 {
-  char buff[MSG_LENGTH];
-  char name[MSG_LENGTH];
-  char host[MSG_LENGTH];
   int port;
+  char host[MSG_LENGTH];
+  char name[MSG_LENGTH];
+  char buff[MSG_LENGTH];
   bool offline;
   msg_list_t messages = {0};
-
 
   erase_display();
   fflush(stdout);
