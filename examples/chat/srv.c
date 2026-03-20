@@ -7,6 +7,7 @@
 // ============================================================================
 
 
+//#include <errno.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,7 +17,6 @@
 #include <sys/time.h>
 #include <sys/socket.h>
 #include <sys/select.h>
-#include <errno.h>
 
 
 // ============================================================================
@@ -27,6 +27,67 @@
 #define PORT 6969
 #define MSG_LEN 256
 #define FDS_MAX 8
+
+
+// ============================================================================
+// Functions
+// ============================================================================
+
+void
+set_socket_reuse(int sockfd)
+{
+  int opt;
+  if (sockfd > STDERR_FILENO)
+  {
+    opt = 1;
+    if ((setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt))) == -1)
+    {
+      perror("setsockopt");
+      close(sockfd);
+      exit(EXIT_FAILURE);
+    }
+  }
+}
+
+int
+create_socket_tcp(void)
+{
+  int sockfd;
+  if ((sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1)
+  {
+    perror("socket");
+    exit(EXIT_FAILURE);
+  }
+  return sockfd;
+}
+
+void
+start_socket_on(int sockfd, int port)
+{
+  struct sockaddr_in addr;
+  socklen_t socklen;
+
+  socklen = sizeof(addr);
+  set_socket_reuse(sockfd);
+
+  addr.sin_family = PF_INET;
+  addr.sin_addr.s_addr = htonl(INADDR_ANY);
+  addr.sin_port = htons(port);
+
+  if (bind(sockfd, (struct sockaddr *) &addr, sizeof(addr)) == -1)
+  {
+    perror("bind");
+    close(sockfd);
+    exit(EXIT_FAILURE);
+  }
+
+  if (listen(sockfd, SOMAXCONN) == -1)
+  {
+    perror("listen");
+    close(sockfd);
+    exit(EXIT_FAILURE);
+  }
+}
 
 
 // ============================================================================
@@ -45,57 +106,22 @@ main(void)
   socklen_t socklen;
   struct timeval delay;
   char buff[MSG_LEN];
-  bool quit;
-  int opt;
 
 
   for (int i = 0; i < FDS_MAX; ++i)
     clients[i] = -1;
 
-  socklen = sizeof(addr);
-  memset(&addr, '\0', sizeof(addr));
-  addr.sin_family = PF_INET;
-  addr.sin_addr.s_addr = htonl(HOST);
-  addr.sin_port = htons(PORT);
-
-  if ((server = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1)
-  {
-    perror("socket");
-    return EXIT_FAILURE;
-  }
-
-  opt = 1;
-  if (setsockopt(server, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1)
-  {
-    perror("setsockopt");
-    close(server);
-    return EXIT_FAILURE;
-  }
-
-  if (bind(server, (struct sockaddr *) &addr, sizeof(addr)) == -1)
-  {
-    perror("bind");
-    close(server);
-    return EXIT_FAILURE;
-  }
-
-  if (listen(server, SOMAXCONN) == -1)
-  {
-    perror("listen");
-    close(server);
-    return EXIT_FAILURE;
-  }
-
+  server = create_socket_tcp();
+  start_socket_on(server, PORT);
   printf("Chat server started on port %d\n", PORT);
 
 
-  maxfd = server;
-  quit = false;
-
-  while (!quit)
+  for (bool loop = true; loop; )
   {
     FD_ZERO(&readfds);
+    FD_SET(STDIN_FILENO, &readfds);
     FD_SET(server, &readfds);
+    maxfd = server;
 
     memset(&addr, '\0', sizeof(addr));
     client = accept(server, (struct sockaddr *) &addr, &socklen);
